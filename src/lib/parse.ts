@@ -1,10 +1,12 @@
-import { EquipCategory, EquipRule, matchRule } from "./catalog";
+import { EquipCategory, EquipRule, isAccessoryLine, matchRule } from "./catalog";
 
 export interface ParsedLine {
   id: string;
   raw: string;
   quantity: number;
   rule: EquipRule | null;
+  /** ligne reconnue comme accessoire/câblage : ignorée par défaut, mais réversible */
+  autoIgnored: boolean;
   /** pour les lignes non reconnues : catégorie choisie manuellement, ou null pour ignorer */
   manualCategory: EquipCategory | null;
 }
@@ -13,11 +15,22 @@ const QTY_PREFIX = /^(\d+)\s*[x×]\s*(.+)$/i;
 const QTY_SUFFIX = /^(.+?)\s*[x×]\s*(\d+)$/i;
 const QTY_PARENS = /^(.+?)\s*\((\d+)\)$/;
 
+const EMAIL_RE = /@/;
+const PHONE_RE = /\d{2}[.\s]\d{2}[.\s]\d{2}[.\s]\d{2}[.\s]\d{2}/;
+const SECTION_HEADER_RE = /^[A-ZÀ-Ý0-9\s'&:./-]+$/;
+
+/** En-têtes de section, coordonnées d'équipe, dates : pas du matériel, à ignorer sans même les lister. */
+function isNoiseLine(line: string): boolean {
+  if (EMAIL_RE.test(line) || PHONE_RE.test(line)) return true;
+  if (line.length <= 28 && SECTION_HEADER_RE.test(line) && /[A-ZÀ-Ý]/.test(line)) return true;
+  return false;
+}
+
 export function parseEquipmentList(text: string): ParsedLine[] {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.replace(/^[-*•]\s*/, "").trim())
-    .filter((l) => l.length > 0);
+    .filter((l) => l.length > 0 && !isNoiseLine(l));
 
   return lines.map((raw, i) => {
     let quantity = 1;
@@ -37,12 +50,14 @@ export function parseEquipmentList(text: string): ParsedLine[] {
       rest = suffix[1];
     }
 
-    const rule = matchRule(rest.toLowerCase());
+    const normalized = rest.toLowerCase();
+    const rule = matchRule(normalized);
     return {
       id: `line_${i}_${Math.random().toString(36).slice(2, 8)}`,
       raw: rest.trim() || raw,
       quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
       rule,
+      autoIgnored: !rule && isAccessoryLine(normalized),
       manualCategory: null,
     };
   });

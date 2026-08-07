@@ -6,6 +6,45 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, EquipCategory } from "@/lib/catalog";
 import { detectKind, extractImageText, extractPdfText } from "@/lib/extractFile";
 import { extractTextFromFile, ParsedLine } from "@/lib/parse";
 
+function UnmatchedLineRow({
+  line,
+  onUpdateLine,
+  muted,
+}: {
+  line: ParsedLine;
+  onUpdateLine: (id: string, patch: Partial<ParsedLine>) => void;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-lg border-[2px] px-2.5 py-1.5 text-xs ${
+        muted ? "border-black/15 bg-black/[0.02]" : "border-black/30 bg-white"
+      }`}
+    >
+      <div className={`mb-1 truncate font-bold ${muted ? "text-black/50" : ""}`}>
+        {line.quantity > 1 ? `${line.quantity}× ` : ""}
+        {line.raw}
+      </div>
+      <select
+        value={line.manualCategory ?? ""}
+        onChange={(e) =>
+          onUpdateLine(line.id, {
+            manualCategory: (e.target.value || null) as EquipCategory | null,
+          })
+        }
+        className="w-full rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-semibold outline-none"
+      >
+        <option value="">Ignorer cette ligne</option>
+        {CATEGORY_ORDER.map((cat) => (
+          <option key={cat} value={cat}>
+            Classer comme « {CATEGORY_LABELS[cat]} »
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ImportPanel({
   rawText,
   onRawTextChange,
@@ -63,7 +102,8 @@ export function ImportPanel({
   );
 
   const matched = parsedLines?.filter((l) => l.rule) ?? [];
-  const unmatched = parsedLines?.filter((l) => !l.rule) ?? [];
+  const toReview = parsedLines?.filter((l) => !l.rule && !l.autoIgnored) ?? [];
+  const autoIgnored = parsedLines?.filter((l) => !l.rule && l.autoIgnored) ?? [];
 
   return (
     <aside className="no-print flex h-full w-96 shrink-0 flex-col border-r-[3px] border-black bg-white">
@@ -174,42 +214,32 @@ export function ImportPanel({
               )}
             </div>
 
-            {unmatched.length > 0 && (
+            {toReview.length > 0 && (
               <>
                 <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-black/60">
-                  {unmatched.length} ligne{unmatched.length > 1 ? "s" : ""} non reconnue
-                  {unmatched.length > 1 ? "s" : ""}
+                  {toReview.length} ligne{toReview.length > 1 ? "s" : ""} à classer
                 </p>
                 <div className="mb-4 flex flex-col gap-1.5">
-                  {unmatched.map((l) => (
-                    <div
-                      key={l.id}
-                      className="rounded-lg border-[2px] border-black/30 bg-white px-2.5 py-1.5 text-xs"
-                    >
-                      <div className="mb-1 truncate font-bold">
-                        {l.quantity > 1 ? `${l.quantity}× ` : ""}
-                        {l.raw}
-                      </div>
-                      <select
-                        value={l.manualCategory ?? ""}
-                        onChange={(e) =>
-                          onUpdateLine(l.id, {
-                            manualCategory: (e.target.value || null) as EquipCategory | null,
-                          })
-                        }
-                        className="w-full rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-semibold outline-none"
-                      >
-                        <option value="">Ignorer cette ligne</option>
-                        {CATEGORY_ORDER.map((cat) => (
-                          <option key={cat} value={cat}>
-                            Classer comme « {CATEGORY_LABELS[cat]} »
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  {toReview.map((l) => (
+                    <UnmatchedLineRow key={l.id} line={l} onUpdateLine={onUpdateLine} />
                   ))}
                 </div>
               </>
+            )}
+
+            {autoIgnored.length > 0 && (
+              <details className="mb-4 rounded-lg border-[2px] border-black/15 p-2">
+                <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-wider text-black/50">
+                  {autoIgnored.length} ligne{autoIgnored.length > 1 ? "s" : ""} ignorée
+                  {autoIgnored.length > 1 ? "s" : ""} automatiquement (câbles, plaques, accessoires
+                  de montage…)
+                </summary>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {autoIgnored.map((l) => (
+                    <UnmatchedLineRow key={l.id} line={l} onUpdateLine={onUpdateLine} muted />
+                  ))}
+                </div>
+              </details>
             )}
 
             <ComicButton onClick={onGenerate} variant="solid">

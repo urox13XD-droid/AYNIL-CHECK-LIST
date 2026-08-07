@@ -295,3 +295,31 @@ export function matchRule(normalizedLine: string): EquipRule | null {
   }
   return best;
 }
+
+/**
+ * Matériel de fixation, câblage et consommables : ce n'est pas ce qu'on
+ * vérifie à l'essai caméra (le point est déjà couvert par la check-list de
+ * l'appareil principal), donc ces lignes sont ignorées par défaut plutôt que
+ * de noyer la liste « non reconnu » que l'utilisateur doit trier à la main.
+ */
+export const IGNORE_KEYWORDS: string[] = [
+  // fixations / plaques
+  "top plate", "plate", "bridge plate", "top handle", "shoulder adapter",
+  "plaque", "adaptateur hot swap", "adaptateur", "platine", "spigot", "qrp",
+  // câblage
+  "câble", "cable", "câbles tissus", "cables tissus", "rallonge", "vipère",
+  "d-tap", "touret", "multiprise", "convertisseur", "répartiteur",
+  // habillage caméra / accessoires légers
+  "cage", "shade", "bras magique", "tige", "poignée", "poignées", "bague",
+  "tiroir", "clip on", "housse", "sacoche",
+  // machinerie / roulantes (hors périmètre essai caméra)
+  "tête fluide", "head lock", "head_lock", "branche", "pied à roulettes",
+  "roulante", "hub usb",
+];
+
+export function isAccessoryLine(normalizedLine: string): boolean {
+  return IGNORE_KEYWORDS.some((kw) => {
+    const idx = leadingKeywordIndex(normalizedLine, kw);
+    return idx !== -1 && idx <= MAX_KEYWORD_LEAD_CHARS;
+  });
+}
