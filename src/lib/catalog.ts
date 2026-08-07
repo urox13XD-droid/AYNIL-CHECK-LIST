@@ -256,12 +256,38 @@ export const EQUIP_CATALOG: EquipRule[] = [
   { id: "stabilizer", label: "Stabilisateur (Movi / Ronin)", category: "support", keywords: ["movi", "ronin"] },
 ];
 
+/**
+ * Un mot-clé ne compte que s'il apparaît en tête de ligne (juste après la
+ * quantité, éventuellement précédé d'une courte marque/article). Ça évite
+ * qu'une ligne d'accessoire qui *mentionne* un appareil en passant («kit
+ * énergie Sony Venice 290 Wh», «câble alim moteur RF sur Venice») ne soit
+ * comptée comme un exemplaire de plus de cet appareil.
+ */
+const MAX_KEYWORD_LEAD_CHARS = 14;
+
+function isWordChar(ch: string | undefined): boolean {
+  return !!ch && /[a-z0-9à-ÿ]/i.test(ch);
+}
+
+function leadingKeywordIndex(text: string, keyword: string): number {
+  let from = 0;
+  for (;;) {
+    const idx = text.indexOf(keyword, from);
+    if (idx === -1) return -1;
+    const before = idx === 0 ? undefined : text[idx - 1];
+    const after = text[idx + keyword.length];
+    if (!isWordChar(before) && !isWordChar(after)) return idx;
+    from = idx + 1;
+  }
+}
+
 export function matchRule(normalizedLine: string): EquipRule | null {
   let best: EquipRule | null = null;
   let bestLen = 0;
   for (const rule of EQUIP_CATALOG) {
     for (const kw of rule.keywords) {
-      if (normalizedLine.includes(kw) && kw.length > bestLen) {
+      const idx = leadingKeywordIndex(normalizedLine, kw);
+      if (idx !== -1 && idx <= MAX_KEYWORD_LEAD_CHARS && kw.length > bestLen) {
         best = rule;
         bestLen = kw.length;
       }
