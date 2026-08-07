@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // vendored, pre-minified worker/wasm assets, not our source
+    "public/pdf.worker.min.mjs",
+    "public/tesseract/**",
   ]),
 ]);
 
