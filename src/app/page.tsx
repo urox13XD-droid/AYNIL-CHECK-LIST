@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import NextImage from "next/image";
 import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
 import { ChecklistView } from "@/components/ChecklistView";
+import { SharedSessionBar } from "@/components/SharedSessionBar";
 import { DEFAULT_ROLES } from "@/lib/catalog";
 import { generateSections } from "@/lib/generate";
 import { ParsedLine, parseEquipmentList } from "@/lib/parse";
@@ -20,6 +21,7 @@ import {
   saveRoles,
   upsertProject,
 } from "@/lib/storage";
+import { SharedPayload, useSharedSession } from "@/lib/useSharedSession";
 
 interface Session {
   loaded: boolean;
@@ -246,6 +248,16 @@ export default function Home() {
     saveRoles(next);
   }, []);
 
+  const applyRemoteChecklist = useCallback((payload: SharedPayload) => {
+    setSession((s) => ({ ...s, title: payload.title, rawText: payload.rawText, sections: payload.sections }));
+  }, []);
+
+  const sharedPayload = useMemo<SharedPayload>(
+    () => ({ title: session.title, rawText: session.rawText, sections: session.sections }),
+    [session.title, session.rawText, session.sections]
+  );
+  const shared = useSharedSession(sharedPayload, applyRemoteChecklist);
+
   if (!session.loaded) return null;
 
   return (
@@ -263,6 +275,13 @@ export default function Home() {
         onDeleteProject={handleDeleteProject}
         roles={roles}
         onRolesChange={handleRolesChange}
+      />
+      <SharedSessionBar
+        sessionName={shared.sessionName}
+        status={shared.status}
+        error={shared.error}
+        onJoin={shared.join}
+        onLeave={shared.leave}
       />
       <div className="relative flex min-h-0 flex-1">
         <ImportPanel

@@ -5,6 +5,7 @@ export function ComicButton({
   title,
   disabled,
   type = "button",
+  className = "",
 }: {
   children: React.ReactNode;
   onClick?: () => void;
@@ -12,6 +13,7 @@ export function ComicButton({
   title?: string;
   disabled?: boolean;
   type?: "button" | "submit";
+  className?: string;
 }) {
   return (
     <button
@@ -23,7 +25,7 @@ export function ComicButton({
         variant === "solid"
           ? "bg-black text-white hover:bg-white hover:text-black"
           : "bg-white text-black hover:bg-black hover:text-white"
-      }`}
+      } ${className}`}
     >
       {children}
     </button>
