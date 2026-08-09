@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import NextImage from "next/image";
 import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
 import { ChecklistView } from "@/components/ChecklistView";
@@ -263,7 +264,7 @@ export default function Home() {
         roles={roles}
         onRolesChange={handleRolesChange}
       />
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <ImportPanel
           rawText={session.rawText}
           onRawTextChange={setRawText}
@@ -290,6 +291,10 @@ export default function Home() {
             />
           )}
         </main>
+        <div className="no-print pointer-events-none absolute bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
+          <span className="text-[10px] font-semibold text-black">Powered by</span>
+          <NextImage src="/logo-transpa.png" alt="Transpa" width={917} height={162} className="h-3 w-auto" />
+        </div>
       </div>
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg border-[2.5px] border-black bg-black px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-comic">
