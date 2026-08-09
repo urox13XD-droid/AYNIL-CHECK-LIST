@@ -1,0 +1,37 @@
+name: Supabase keepalive
+
+# Free-tier Supabase projects pause after a period of no API activity.
+# This just makes one lightweight read every few days so the project
+# (shared with AYNIL Condition Report) never goes quiet long enough to pause.
+# Requires repo secrets SUPABASE_URL and SUPABASE_ANON_KEY (Settings →
+# Secrets and variables → Actions) — same values as the app's
+# NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *" # every 3 days at 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the Supabase REST API
+        run: |
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set — nothing to ping." >&2
+            exit 1
+          fi
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/checklist_sessions?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "Supabase REST API responded with HTTP $code"
+          # 200 (rows returned) and 404/400 (table not migrated yet) both count
+          # as reaching the project — only fail on a hard connection/auth error.
+          if [ "$code" -ge 500 ] || [ "$code" = "401" ] || [ "$code" = "000" ]; then
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
