@@ -35,7 +35,7 @@ export function SharedSessionBar({
 
   if (sessionName) {
     return (
-      <div className="no-print flex items-center gap-3 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5">
+      <div className="no-print flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5">
         <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[status]}`} />
         <span className="text-xs font-bold uppercase tracking-wide">
           Session partagée : <span className="font-mono normal-case">{sessionName}</span>

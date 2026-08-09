@@ -22,6 +22,7 @@ import {
   upsertProject,
 } from "@/lib/storage";
 import { SharedPayload, useSharedSession } from "@/lib/useSharedSession";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 interface Session {
   loaded: boolean;
@@ -257,6 +258,7 @@ export default function Home() {
     [session.title, session.rawText, session.sections]
   );
   const shared = useSharedSession(sharedPayload, applyRemoteChecklist);
+  const isMobile = useIsMobile();
 
   if (!session.loaded) return null;
 
@@ -275,6 +277,7 @@ export default function Home() {
         onDeleteProject={handleDeleteProject}
         roles={roles}
         onRolesChange={handleRolesChange}
+        isMobile={isMobile}
       />
       <SharedSessionBar
         sessionName={shared.sessionName}
@@ -283,7 +286,7 @@ export default function Home() {
         onJoin={shared.join}
         onLeave={shared.leave}
       />
-      <div className="relative flex min-h-0 flex-1">
+      <div className={`relative flex min-h-0 flex-1 ${isMobile ? "flex-col overflow-y-auto" : ""}`}>
         <ImportPanel
           rawText={session.rawText}
           onRawTextChange={setRawText}
@@ -291,10 +294,14 @@ export default function Home() {
           parsedLines={session.parsedLines}
           onUpdateLine={handleUpdateLine}
           onGenerate={handleGenerate}
+          isMobile={isMobile}
+          hasChecklist={session.sections.length > 0}
         />
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className={isMobile ? "min-w-0" : "min-w-0 flex-1 overflow-y-auto"}>
           {session.sections.length === 0 ? (
-            <div className="flex h-full items-center justify-center p-10 text-center">
+            <div
+              className={`flex items-center justify-center p-10 text-center ${isMobile ? "min-h-[40vh]" : "h-full"}`}
+            >
               <p className="font-display max-w-sm text-lg uppercase leading-snug text-black/30">
                 Analysez une liste de matériel pour générer la check-list d&apos;essai caméra
               </p>
@@ -310,7 +317,7 @@ export default function Home() {
             />
           )}
         </main>
-        <div className="no-print pointer-events-none absolute bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
+        <div className="no-print pointer-events-none fixed bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
           <span className="text-[10px] font-semibold text-black">Powered by</span>
           <NextImage src="/logo-transpa.png" alt="Transpa" width={917} height={162} className="h-3 w-auto" />
         </div>
