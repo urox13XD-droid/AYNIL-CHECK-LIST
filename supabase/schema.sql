@@ -15,6 +15,11 @@ create table if not exists checklist_sessions (
 
 alter table checklist_sessions enable row level security;
 
+-- RLS policies only filter rows; the anon/authenticated roles also need the
+-- base table grant, or every query fails with "permission denied for table"
+-- before RLS is even evaluated.
+grant select, insert, update on checklist_sessions to anon, authenticated;
+
 -- No login system in this app: knowing (or guessing) the session name is what
 -- grants access, the same trust model as a shared document link. Anyone with
 -- the public anon key can read/write any session row.
