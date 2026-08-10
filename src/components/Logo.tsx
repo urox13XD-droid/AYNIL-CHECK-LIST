@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function Logo({ subtitle }: { subtitle?: string }) {
   return (
-    <div className="inline-flex shrink-0 flex-col items-start select-none">
+    <div className="inline-flex shrink-0 flex-col items-center select-none">
       <Image
         src="/aynil-logo.jpg"
         alt="AYNIL"
