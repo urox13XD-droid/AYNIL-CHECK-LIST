@@ -161,7 +161,7 @@ export function ChecklistView({
           <div
             key={section.id}
             className={`rounded-xl border-[2.5px] border-black shadow-comic transition-colors ${
-              complete ? "bg-green-50" : "bg-white"
+              complete ? "bg-green-100" : "bg-white"
             }`}
           >
             <button
