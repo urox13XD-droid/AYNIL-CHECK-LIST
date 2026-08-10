@@ -49,8 +49,6 @@ export const DEFAULT_ROLES = [
   "Assistant vidéo / HF",
   "DIT",
   "Chef opérateur",
-  "Ingénieur du son",
-  "Régie",
 ];
 
 export const DEFAULT_ROLE_BY_CATEGORY: Record<EquipCategory, string> = {

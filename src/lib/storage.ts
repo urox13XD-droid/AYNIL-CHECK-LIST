@@ -10,6 +10,8 @@ export interface ChecklistSection {
   title: string;
   quantity: number;
   items: ChecklistItemState[];
+  /** manually toggled, and set automatically the moment every item becomes checked */
+  collapsed?: boolean;
 }
 
 export interface ChecklistProject {

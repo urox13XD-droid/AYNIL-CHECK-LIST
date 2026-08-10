@@ -115,11 +115,25 @@ export default function Home() {
   const handleToggle = useCallback(
     (sectionId: string, itemId: string) => {
       updateSections((sections) =>
-        sections.map((sec) =>
-          sec.id !== sectionId
-            ? sec
-            : { ...sec, items: sec.items.map((it) => (it.id === itemId ? { ...it, checked: !it.checked } : it)) }
-        )
+        sections.map((sec) => {
+          if (sec.id !== sectionId) return sec;
+          const items = sec.items.map((it) => (it.id === itemId ? { ...it, checked: !it.checked } : it));
+          const wasComplete = sec.items.length > 0 && sec.items.every((it) => it.checked);
+          const isComplete = items.length > 0 && items.every((it) => it.checked);
+          // auto-collapse the moment a section is fully checked off; leave the
+          // collapsed state alone otherwise, so reopening it manually sticks
+          const collapsed = !wasComplete && isComplete ? true : sec.collapsed;
+          return { ...sec, items, collapsed };
+        })
+      );
+    },
+    [updateSections]
+  );
+
+  const handleToggleSectionCollapse = useCallback(
+    (sectionId: string) => {
+      updateSections((sections) =>
+        sections.map((sec) => (sec.id !== sectionId ? sec : { ...sec, collapsed: !sec.collapsed }))
       );
     },
     [updateSections]
@@ -331,6 +345,7 @@ export default function Home() {
               onRoleChange={handleRoleChange}
               onAddItem={handleAddItem}
               onRemoveItem={handleRemoveItem}
+              onToggleCollapse={handleToggleSectionCollapse}
             />
           )}
         </main>
