@@ -13,6 +13,7 @@ export function Toolbar({
   onExportJson,
   onImportJson,
   onPrint,
+  onLoadMasterChecklist,
   projects,
   onOpenProject,
   onDeleteProject,
@@ -27,6 +28,7 @@ export function Toolbar({
   onExportJson: () => void;
   onImportJson: (file: File) => void;
   onPrint: () => void;
+  onLoadMasterChecklist: () => void;
   projects: ChecklistProject[];
   onOpenProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
@@ -145,6 +147,7 @@ export function Toolbar({
   const actionButtons = (
     <>
       <ComicButton onClick={onNew}>Nouveau</ComicButton>
+      <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
       {importInput}
       <ComicButton onClick={() => fileRef.current?.click()}>Importer</ComicButton>
       <ComicButton onClick={onExportJson}>Export JSON</ComicButton>

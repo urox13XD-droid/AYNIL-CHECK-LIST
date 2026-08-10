@@ -45,6 +45,7 @@ export const CATEGORY_ORDER: EquipCategory[] = [
 export const DEFAULT_ROLES = [
   "1er assistant caméra",
   "2e assistant caméra",
+  "3e assistant caméra / vidéo",
   "Assistant vidéo / HF",
   "DIT",
   "Chef opérateur",

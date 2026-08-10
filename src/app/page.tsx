@@ -6,8 +6,10 @@ import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
 import { ChecklistView } from "@/components/ChecklistView";
 import { SharedSessionBar } from "@/components/SharedSessionBar";
+import { ComicButton } from "@/components/ComicButton";
 import { DEFAULT_ROLES } from "@/lib/catalog";
 import { generateSections } from "@/lib/generate";
+import { buildMasterChecklist } from "@/lib/masterChecklist";
 import { ParsedLine, parseEquipmentList } from "@/lib/parse";
 import {
   ChecklistProject,
@@ -95,6 +97,16 @@ export default function Home() {
   const handleGenerate = useCallback(() => {
     setSession((s) => (s.parsedLines ? { ...s, sections: generateSections(s.parsedLines) } : s));
   }, []);
+
+  const handleLoadMasterChecklist = useCallback(() => {
+    if (
+      session.sections.length > 0 &&
+      !window.confirm("Charger la Master Checklist ? La check-list actuelle sera remplacée.")
+    ) {
+      return;
+    }
+    setSession((s) => ({ ...s, sections: buildMasterChecklist() }));
+  }, [session.sections.length]);
 
   const updateSections = useCallback((updater: (sections: ChecklistSection[]) => ChecklistSection[]) => {
     setSession((s) => ({ ...s, sections: updater(s.sections) }));
@@ -272,6 +284,7 @@ export default function Home() {
         onExportJson={handleExportJson}
         onImportJson={handleImportJson}
         onPrint={handlePrint}
+        onLoadMasterChecklist={handleLoadMasterChecklist}
         projects={projects}
         onOpenProject={handleOpenProject}
         onDeleteProject={handleDeleteProject}
@@ -300,11 +313,15 @@ export default function Home() {
         <main className={isMobile ? "min-w-0" : "min-w-0 flex-1 overflow-y-auto"}>
           {session.sections.length === 0 ? (
             <div
-              className={`flex items-center justify-center p-10 text-center ${isMobile ? "min-h-[40vh]" : "h-full"}`}
+              className={`flex flex-col items-center justify-center gap-4 p-10 text-center ${isMobile ? "min-h-[40vh]" : "h-full"}`}
             >
               <p className="font-display max-w-sm text-lg uppercase leading-snug text-black/30">
                 Analysez une liste de matériel pour générer la check-list d&apos;essai caméra
               </p>
+              <p className="text-xs font-semibold text-black/40">— ou —</p>
+              <ComicButton onClick={handleLoadMasterChecklist} variant="solid">
+                Charger la Master Checklist
+              </ComicButton>
             </div>
           ) : (
             <ChecklistView
