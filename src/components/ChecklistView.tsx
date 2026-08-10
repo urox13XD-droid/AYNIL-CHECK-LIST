@@ -183,20 +183,22 @@ export function ChecklistView({
               <>
                 <div className="flex flex-col divide-y-[1.5px] divide-black/10 px-4">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={() => onToggle(section.id, item.id)}
-                        className="h-4 w-4 shrink-0 accent-black"
-                      />
-                      <span
-                        className={`min-w-0 flex-1 text-sm font-semibold ${
-                          item.checked ? "text-black/40 line-through" : ""
-                        }`}
-                      >
-                        {item.label}
-                      </span>
+                    <div key={item.id} className="flex items-center gap-3 py-1">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 select-none py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={item.checked}
+                          onChange={() => onToggle(section.id, item.id)}
+                          className="h-5 w-5 shrink-0 accent-black"
+                        />
+                        <span
+                          className={`min-w-0 flex-1 text-sm font-semibold ${
+                            item.checked ? "text-black/40 line-through" : ""
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </label>
                       <select
                         value={item.role}
                         onChange={(e) => onRoleChange(section.id, item.id, e.target.value)}
