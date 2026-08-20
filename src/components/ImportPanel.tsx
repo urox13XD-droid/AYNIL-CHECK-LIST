@@ -131,7 +131,7 @@ export function ImportPanel({
       className={
         isMobile
           ? "no-print flex w-full shrink-0 flex-col border-b-[3px] border-black bg-white"
-          : "no-print flex h-full w-72 shrink-0 flex-col border-r-[3px] border-black bg-white"
+          : "no-print flex h-full w-60 shrink-0 flex-col border-r-[3px] border-black bg-white"
       }
     >
       <div className={isMobile ? "flex items-center justify-between gap-2 p-3" : "border-b-[3px] border-black p-3"}>

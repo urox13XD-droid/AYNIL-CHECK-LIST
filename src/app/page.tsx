@@ -43,6 +43,9 @@ const EMPTY_SESSION: Omit<Session, "loaded" | "projectId"> = {
   sections: [],
 };
 
+/** matches ImportPanel's desktop width (w-60) — used to slide the collapse tab to the sidebar's edge */
+const SIDEBAR_WIDTH_PX = 240;
+
 export default function Home() {
   const [session, setSession] = useState<Session>({
     loaded: false,
@@ -328,6 +331,7 @@ export default function Home() {
   const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -338,6 +342,20 @@ export default function Home() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
   }, []);
 
   if (!session.loaded) return null;
@@ -401,11 +419,16 @@ export default function Home() {
               type="button"
               onClick={() => setSidebarCollapsed((v) => !v)}
               title={sidebarCollapsed ? "Afficher la liste de matériel" : "Réduire la liste de matériel"}
-              className="no-print flex w-5 shrink-0 items-center justify-center border-r-[3px] border-black bg-white text-black/40 hover:bg-black hover:text-white"
+              style={{ left: sidebarCollapsed ? 0 : SIDEBAR_WIDTH_PX }}
+              className="no-print absolute top-1/2 z-40 flex h-14 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border-[2px] border-l-0 border-black bg-white shadow-comic-sm transition-[left]"
             >
-              <span className={`inline-block text-xs transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`}>
-                ‹
-              </span>
+              <svg
+                viewBox="0 0 24 24"
+                className={`h-3.5 w-3.5 transition-transform ${sidebarCollapsed ? "" : "rotate-180"}`}
+                fill="currentColor"
+              >
+                <path d="M9 5l8 7-8 7z" />
+              </svg>
             </button>
           </>
         )}
@@ -438,34 +461,66 @@ export default function Home() {
             />
           )}
         </main>
-        <button
-          type="button"
-          onClick={() => setFocusMode((v) => !v)}
-          title={focusMode ? "Quitter le plein écran (Ctrl/Cmd+F)" : "Plein écran (Ctrl/Cmd+F)"}
-          className="no-print fixed bottom-11 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border-[2.5px] border-black bg-white shadow-comic-sm transition hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-        >
-          {focusMode ? (
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-              <path
-                d="M8 3H3v5M12 3h5v5M8 17H3v-5M12 17h5v-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-              <path
-                d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </button>
+        <div className="no-print fixed bottom-11 right-3 z-20 flex gap-2">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Quitter le plein écran navigateur" : "Plein écran navigateur"}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border-[2.5px] border-black bg-white shadow-comic-sm transition hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+          >
+            {isFullscreen ? (
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                <path
+                  d="M8 3H3v5M12 3h5v5M8 17H3v-5M12 17h5v-5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                <path
+                  d="M2 6V2h4M18 6V2h-4M2 14v4h4M18 14v4h-4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setFocusMode((v) => !v)}
+            title={focusMode ? "Quitter le mode focus (Ctrl/Cmd+F)" : "Mode focus, sans les menus (Ctrl/Cmd+F)"}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border-[2.5px] border-black bg-white shadow-comic-sm transition hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+          >
+            {focusMode ? (
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path d="M1 1l22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                <path
+                  d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            )}
+          </button>
+        </div>
         <div className="no-print pointer-events-none fixed bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
           <span className="text-[10px] font-semibold text-black">Powered by</span>
           <NextImage src="/logo-transpa.png" alt="Transpa" width={917} height={162} className="h-3 w-auto" />
