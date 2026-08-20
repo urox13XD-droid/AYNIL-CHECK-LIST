@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import NextImage from "next/image";
+import { arrayMove } from "@dnd-kit/sortable";
 import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
 import { ChecklistView } from "@/components/ChecklistView";
@@ -180,6 +181,46 @@ export default function Home() {
     [updateSections]
   );
 
+  const handleCommentChange = useCallback(
+    (sectionId: string, itemId: string, comment: string) => {
+      updateSections((sections) =>
+        sections.map((sec) =>
+          sec.id !== sectionId
+            ? sec
+            : { ...sec, items: sec.items.map((it) => (it.id === itemId ? { ...it, comment } : it)) }
+        )
+      );
+    },
+    [updateSections]
+  );
+
+  const handleReorderSections = useCallback(
+    (activeId: string, overId: string) => {
+      updateSections((sections) => {
+        const oldIndex = sections.findIndex((sec) => sec.id === activeId);
+        const newIndex = sections.findIndex((sec) => sec.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return sections;
+        return arrayMove(sections, oldIndex, newIndex);
+      });
+    },
+    [updateSections]
+  );
+
+  const handleReorderItems = useCallback(
+    (sectionId: string, activeId: string, overId: string) => {
+      updateSections((sections) =>
+        sections.map((sec) => {
+          if (sec.id !== sectionId) return sec;
+          const oldIndex = sec.items.findIndex((it) => it.id === activeId);
+          const newIndex = sec.items.findIndex((it) => it.id === overId);
+          if (oldIndex === -1 || newIndex === -1) return sec;
+          return { ...sec, items: arrayMove(sec.items, oldIndex, newIndex) };
+        })
+      );
+    },
+    [updateSections]
+  );
+
   const buildProject = useCallback(
     (): ChecklistProject => ({
       id: session.projectId,
@@ -285,45 +326,89 @@ export default function Home() {
   );
   const shared = useSharedSession(sharedPayload, applyRemoteChecklist);
   const isMobile = useIsMobile();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setFocusMode((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   if (!session.loaded) return null;
 
   return (
     <div className="flex h-screen flex-col bg-white">
-      <Toolbar
-        title={session.title}
-        onTitleChange={setTitle}
-        onNew={handleNew}
-        onSave={handleSave}
-        onExportJson={handleExportJson}
-        onImportJson={handleImportJson}
-        onPrint={handlePrint}
-        onLoadMasterChecklist={handleLoadMasterChecklist}
-        projects={projects}
-        onOpenProject={handleOpenProject}
-        onDeleteProject={handleDeleteProject}
-        roles={roles}
-        onRolesChange={handleRolesChange}
-        isMobile={isMobile}
-      />
-      <SharedSessionBar
-        sessionName={shared.sessionName}
-        status={shared.status}
-        error={shared.error}
-        onJoin={shared.join}
-        onLeave={shared.leave}
-      />
-      <div className={`relative flex min-h-0 flex-1 ${isMobile ? "flex-col overflow-y-auto" : ""}`}>
-        <ImportPanel
-          rawText={session.rawText}
-          onRawTextChange={setRawText}
-          onAnalyze={handleAnalyze}
-          parsedLines={session.parsedLines}
-          onUpdateLine={handleUpdateLine}
-          onGenerate={handleGenerate}
+      {!focusMode && (
+        <Toolbar
+          title={session.title}
+          onTitleChange={setTitle}
+          onNew={handleNew}
+          onSave={handleSave}
+          onExportJson={handleExportJson}
+          onImportJson={handleImportJson}
+          onPrint={handlePrint}
+          onLoadMasterChecklist={handleLoadMasterChecklist}
+          projects={projects}
+          onOpenProject={handleOpenProject}
+          onDeleteProject={handleDeleteProject}
+          roles={roles}
+          onRolesChange={handleRolesChange}
           isMobile={isMobile}
-          hasChecklist={session.sections.length > 0}
         />
+      )}
+      {!focusMode && (
+        <SharedSessionBar
+          sessionName={shared.sessionName}
+          status={shared.status}
+          error={shared.error}
+          onJoin={shared.join}
+          onLeave={shared.leave}
+        />
+      )}
+      <div className={`relative flex min-h-0 flex-1 ${isMobile ? "flex-col overflow-y-auto" : ""}`}>
+        {isMobile ? (
+          <ImportPanel
+            rawText={session.rawText}
+            onRawTextChange={setRawText}
+            onAnalyze={handleAnalyze}
+            parsedLines={session.parsedLines}
+            onUpdateLine={handleUpdateLine}
+            onGenerate={handleGenerate}
+            isMobile
+            hasChecklist={session.sections.length > 0}
+          />
+        ) : (
+          <>
+            {!sidebarCollapsed && (
+              <ImportPanel
+                rawText={session.rawText}
+                onRawTextChange={setRawText}
+                onAnalyze={handleAnalyze}
+                parsedLines={session.parsedLines}
+                onUpdateLine={handleUpdateLine}
+                onGenerate={handleGenerate}
+                isMobile={false}
+                hasChecklist={session.sections.length > 0}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              title={sidebarCollapsed ? "Afficher la liste de matériel" : "Réduire la liste de matériel"}
+              className="no-print flex w-5 shrink-0 items-center justify-center border-r-[3px] border-black bg-white text-black/40 hover:bg-black hover:text-white"
+            >
+              <span className={`inline-block text-xs transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`}>
+                ‹
+              </span>
+            </button>
+          </>
+        )}
         <main className={isMobile ? "min-w-0" : "min-w-0 flex-1 overflow-y-auto"}>
           {session.sections.length === 0 ? (
             <div
@@ -346,9 +431,41 @@ export default function Home() {
               onAddItem={handleAddItem}
               onRemoveItem={handleRemoveItem}
               onToggleCollapse={handleToggleSectionCollapse}
+              onCommentChange={handleCommentChange}
+              onReorderSections={handleReorderSections}
+              onReorderItems={handleReorderItems}
+              isMobile={isMobile}
             />
           )}
         </main>
+        <button
+          type="button"
+          onClick={() => setFocusMode((v) => !v)}
+          title={focusMode ? "Quitter le plein écran (Ctrl/Cmd+F)" : "Plein écran (Ctrl/Cmd+F)"}
+          className="no-print fixed bottom-11 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border-[2.5px] border-black bg-white shadow-comic-sm transition hover:bg-black hover:text-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+        >
+          {focusMode ? (
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path
+                d="M8 3H3v5M12 3h5v5M8 17H3v-5M12 17h5v-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path
+                d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </button>
         <div className="no-print pointer-events-none fixed bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
           <span className="text-[10px] font-semibold text-black">Powered by</span>
           <NextImage src="/logo-transpa.png" alt="Transpa" width={917} height={162} className="h-3 w-auto" />

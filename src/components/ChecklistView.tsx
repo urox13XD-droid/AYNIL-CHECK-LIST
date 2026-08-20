@@ -1,8 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ComicButton } from "@/components/ComicButton";
-import { ChecklistSection } from "@/lib/storage";
+import { ChecklistItemState, ChecklistSection } from "@/lib/storage";
 
 const UNASSIGNED = "__unassigned__";
 
@@ -28,6 +38,32 @@ function Chevron({ open }: { open: boolean }) {
       className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
     >
       <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GripIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+      <circle cx="7" cy="4" r="1.4" />
+      <circle cx="13" cy="4" r="1.4" />
+      <circle cx="7" cy="10" r="1.4" />
+      <circle cx="13" cy="10" r="1.4" />
+      <circle cx="7" cy="16" r="1.4" />
+      <circle cx="13" cy="16" r="1.4" />
+    </svg>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0">
+      <path
+        d="M3 4.5A1.5 1.5 0 0 1 4.5 3h11A1.5 1.5 0 0 1 17 4.5v7A1.5 1.5 0 0 1 15.5 13H8.2L4.5 16v-3H4.5A1.5 1.5 0 0 1 3 11.5v-7Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -114,6 +150,271 @@ function RoleFilter({
   );
 }
 
+function ItemRow({
+  sectionId,
+  item,
+  roles,
+  reorderDisabled,
+  commentOpen,
+  isMobile,
+  onToggle,
+  onRoleChange,
+  onRemoveItem,
+  onCommentChange,
+  onToggleComment,
+}: {
+  sectionId: string;
+  item: ChecklistItemState;
+  roles: string[];
+  reorderDisabled: boolean;
+  commentOpen: boolean;
+  isMobile: boolean;
+  onToggle: (sectionId: string, itemId: string) => void;
+  onRoleChange: (sectionId: string, itemId: string, role: string) => void;
+  onRemoveItem: (sectionId: string, itemId: string) => void;
+  onCommentChange: (sectionId: string, itemId: string, comment: string) => void;
+  onToggleComment: (itemId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: reorderDisabled,
+  });
+  const hasComment = !!item.comment?.trim();
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group ${isDragging ? "relative z-10 opacity-60" : ""}`}
+    >
+      <div className={isMobile ? "flex flex-col gap-1 py-1.5" : "flex items-center gap-2 py-1"}>
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className={`shrink-0 touch-none text-black/30 ${
+              reorderDisabled ? "cursor-not-allowed opacity-20" : "cursor-grab hover:text-black active:cursor-grabbing"
+            }`}
+            title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser pour réordonner"}
+            disabled={reorderDisabled}
+          >
+            <GripIcon />
+          </button>
+          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 select-none py-1.5">
+            <input
+              type="checkbox"
+              checked={item.checked}
+              onChange={() => onToggle(sectionId, item.id)}
+              className="h-5 w-5 shrink-0 accent-black"
+            />
+            <span
+              className={`min-w-0 flex-1 text-sm font-semibold ${item.checked ? "text-black/40 line-through" : ""}`}
+            >
+              {item.label}
+            </span>
+          </label>
+          {!isMobile && (
+            <>
+              <select
+                value={item.role}
+                onChange={(e) => onRoleChange(sectionId, item.id, e.target.value)}
+                className="shrink-0 rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-bold uppercase outline-none focus:border-black"
+              >
+                <option value="">Non assigné</option>
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => onToggleComment(item.id)}
+                title="Commentaire"
+                className={`shrink-0 transition-opacity ${
+                  hasComment || commentOpen
+                    ? "text-black opacity-100"
+                    : "text-black opacity-0 group-hover:opacity-60 hover:!opacity-100"
+                }`}
+              >
+                <CommentIcon />
+              </button>
+              <button
+                onClick={() => onRemoveItem(sectionId, item.id)}
+                title="Retirer ce point"
+                className="shrink-0 text-xs font-bold opacity-30 hover:opacity-100"
+              >
+                ✕
+              </button>
+            </>
+          )}
+        </div>
+        {isMobile && (
+          <div className="flex items-center gap-2 pl-6">
+            <select
+              value={item.role}
+              onChange={(e) => onRoleChange(sectionId, item.id, e.target.value)}
+              className="min-w-0 flex-1 rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-bold uppercase outline-none focus:border-black"
+            >
+              <option value="">Non assigné</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onToggleComment(item.id)}
+              title="Commentaire"
+              className={`shrink-0 ${hasComment || commentOpen ? "text-black" : "text-black/40"}`}
+            >
+              <CommentIcon />
+            </button>
+            <button
+              onClick={() => onRemoveItem(sectionId, item.id)}
+              title="Retirer ce point"
+              className="shrink-0 text-xs font-bold text-black/30"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+      {commentOpen && (
+        <div className="mb-2 pl-6">
+          <textarea
+            autoFocus
+            value={item.comment ?? ""}
+            onChange={(e) => onCommentChange(sectionId, item.id, e.target.value)}
+            placeholder="Commentaire…"
+            rows={2}
+            className="w-full resize-none rounded-md border-[1.5px] border-black/40 px-2 py-1.5 text-xs font-semibold outline-none focus:border-black"
+          />
+        </div>
+      )}
+      {!commentOpen && hasComment && (
+        <p className="mb-2 pl-6 text-xs italic text-black/50">{item.comment}</p>
+      )}
+    </div>
+  );
+}
+
+function SectionCard({
+  section,
+  items,
+  roles,
+  complete,
+  reorderDisabled,
+  openComments,
+  isMobile,
+  onToggle,
+  onRoleChange,
+  onAddItem,
+  onRemoveItem,
+  onToggleCollapse,
+  onCommentChange,
+  onToggleComment,
+  onReorderItems,
+}: {
+  section: ChecklistSection;
+  items: ChecklistItemState[];
+  roles: string[];
+  complete: boolean;
+  reorderDisabled: boolean;
+  openComments: Set<string>;
+  isMobile: boolean;
+  onToggle: (sectionId: string, itemId: string) => void;
+  onRoleChange: (sectionId: string, itemId: string, role: string) => void;
+  onAddItem: (sectionId: string, label: string) => void;
+  onRemoveItem: (sectionId: string, itemId: string) => void;
+  onToggleCollapse: (sectionId: string) => void;
+  onCommentChange: (sectionId: string, itemId: string, comment: string) => void;
+  onToggleComment: (itemId: string) => void;
+  onReorderItems: (sectionId: string, activeId: string, overId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: section.id,
+    disabled: reorderDisabled,
+  });
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const done = items.filter((i) => i.checked).length;
+  const collapsed = !!section.collapsed;
+
+  const handleItemDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorderItems(section.id, String(active.id), String(over.id));
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`rounded-xl border-[2.5px] border-black shadow-comic transition-colors ${
+        isDragging ? "relative z-20 opacity-70" : ""
+      } ${complete ? "bg-green-100" : "bg-white"}`}
+    >
+      <div className="flex items-center gap-2 border-black px-3 py-2.5" style={{ borderBottomWidth: collapsed ? 0 : 2.5 }}>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className={`shrink-0 touch-none text-black/40 ${
+            reorderDisabled ? "cursor-not-allowed opacity-20" : "cursor-grab hover:text-black active:cursor-grabbing"
+          }`}
+          title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser pour réordonner"}
+          disabled={reorderDisabled}
+        >
+          <GripIcon />
+        </button>
+        <button
+          type="button"
+          onClick={() => onToggleCollapse(section.id)}
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <Chevron open={!collapsed} />
+            <span className="font-display truncate text-sm uppercase tracking-wide">
+              {section.title}
+              {section.quantity > 1 ? ` x${section.quantity}` : ""}
+            </span>
+          </span>
+          <ProgressBar done={done} total={items.length} />
+        </button>
+      </div>
+      {!collapsed && (
+        <>
+          <div className="flex flex-col divide-y-[1.5px] divide-black/10 px-4">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+              <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                {items.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    sectionId={section.id}
+                    item={item}
+                    roles={roles}
+                    reorderDisabled={reorderDisabled}
+                    commentOpen={openComments.has(item.id)}
+                    isMobile={isMobile}
+                    onToggle={onToggle}
+                    onRoleChange={onRoleChange}
+                    onRemoveItem={onRemoveItem}
+                    onCommentChange={onCommentChange}
+                    onToggleComment={onToggleComment}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+          <div className="border-t-[1.5px] border-black/10 px-4 pb-3">
+            <AddItemForm onAdd={(label) => onAddItem(section.id, label)} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ChecklistView({
   sections,
   roles,
@@ -122,6 +423,10 @@ export function ChecklistView({
   onAddItem,
   onRemoveItem,
   onToggleCollapse,
+  onCommentChange,
+  onReorderSections,
+  onReorderItems,
+  isMobile = false,
 }: {
   sections: ChecklistSection[];
   roles: string[];
@@ -130,8 +435,23 @@ export function ChecklistView({
   onAddItem: (sectionId: string, label: string) => void;
   onRemoveItem: (sectionId: string, itemId: string) => void;
   onToggleCollapse: (sectionId: string) => void;
+  onCommentChange: (sectionId: string, itemId: string, comment: string) => void;
+  onReorderSections: (activeId: string, overId: string) => void;
+  onReorderItems: (sectionId: string, activeId: string, overId: string) => void;
+  isMobile?: boolean;
 }) {
   const [filterRoles, setFilterRoles] = useState<string[]>([]);
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const toggleComment = (itemId: string) => {
+    setOpenComments((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
 
   const matchesFilter = (role: string) =>
     filterRoles.length === 0 || filterRoles.includes(role || UNASSIGNED);
@@ -142,9 +462,16 @@ export function ChecklistView({
 
   const allVisibleItems = visibleSections.flatMap(({ items }) => items);
   const totalDone = allVisibleItems.filter((i) => i.checked).length;
+  const reorderDisabled = filterRoles.length > 0;
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorderSections(String(active.id), String(over.id));
+  };
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
+    <div className={`mx-auto flex max-w-3xl flex-col gap-5 ${isMobile ? "p-3" : "p-6"}`}>
       <div className="flex items-center justify-between gap-2 rounded-xl border-[2.5px] border-black bg-white px-4 py-3 shadow-comic">
         <p className="font-display text-lg uppercase tracking-wide">Check-list essai caméra</p>
         <div className="flex items-center gap-3">
@@ -153,82 +480,32 @@ export function ChecklistView({
         </div>
       </div>
 
-      {visibleSections.map(({ section, items }) => {
-        const done = items.filter((i) => i.checked).length;
-        const complete = items.length > 0 && done === items.length;
-        const collapsed = !!section.collapsed;
-        return (
-          <div
-            key={section.id}
-            className={`rounded-xl border-[2.5px] border-black shadow-comic transition-colors ${
-              complete ? "bg-green-100" : "bg-white"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => onToggleCollapse(section.id)}
-              className="flex w-full items-center justify-between gap-2 border-black px-4 py-2.5 text-left"
-              style={{ borderBottomWidth: collapsed ? 0 : 2.5 }}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <Chevron open={!collapsed} />
-                <span className="font-display truncate text-sm uppercase tracking-wide">
-                  {section.title}
-                  {section.quantity > 1 ? ` x${section.quantity}` : ""}
-                </span>
-              </span>
-              <ProgressBar done={done} total={items.length} />
-            </button>
-            {!collapsed && (
-              <>
-                <div className="flex flex-col divide-y-[1.5px] divide-black/10 px-4">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 py-1">
-                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 select-none py-1.5">
-                        <input
-                          type="checkbox"
-                          checked={item.checked}
-                          onChange={() => onToggle(section.id, item.id)}
-                          className="h-5 w-5 shrink-0 accent-black"
-                        />
-                        <span
-                          className={`min-w-0 flex-1 text-sm font-semibold ${
-                            item.checked ? "text-black/40 line-through" : ""
-                          }`}
-                        >
-                          {item.label}
-                        </span>
-                      </label>
-                      <select
-                        value={item.role}
-                        onChange={(e) => onRoleChange(section.id, item.id, e.target.value)}
-                        className="shrink-0 rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-bold uppercase outline-none focus:border-black"
-                      >
-                        <option value="">Non assigné</option>
-                        {roles.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => onRemoveItem(section.id, item.id)}
-                        title="Retirer ce point"
-                        className="shrink-0 text-xs font-bold opacity-30 hover:opacity-100"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t-[1.5px] border-black/10 px-4 pb-3">
-                  <AddItemForm onAdd={(label) => onAddItem(section.id, label)} />
-                </div>
-              </>
-            )}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+        <SortableContext items={visibleSections.map(({ section }) => section.id)} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-5">
+            {visibleSections.map(({ section, items }) => (
+              <SectionCard
+                key={section.id}
+                section={section}
+                items={items}
+                roles={roles}
+                complete={items.length > 0 && items.filter((i) => i.checked).length === items.length}
+                reorderDisabled={reorderDisabled}
+                openComments={openComments}
+                isMobile={isMobile}
+                onToggle={onToggle}
+                onRoleChange={onRoleChange}
+                onAddItem={onAddItem}
+                onRemoveItem={onRemoveItem}
+                onToggleCollapse={onToggleCollapse}
+                onCommentChange={onCommentChange}
+                onToggleComment={toggleComment}
+                onReorderItems={onReorderItems}
+              />
+            ))}
           </div>
-        );
-      })}
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }

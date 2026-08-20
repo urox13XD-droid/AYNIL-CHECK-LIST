@@ -3,6 +3,7 @@ export interface ChecklistItemState {
   label: string;
   checked: boolean;
   role: string;
+  comment?: string;
 }
 
 export interface ChecklistSection {
