@@ -17,7 +17,7 @@ interface RawSection {
 
 const SECTIONS: RawSection[] = [
   {
-    title: "1. Réception du matériel",
+    title: "Réception du matériel",
     items: [
       ["Vérifier que toute la liste est présente sur le banc", "2,3"],
       ["Comparer avec la liste caméra du chef opérateur", "1"],
@@ -29,7 +29,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "2. Caméra — Capteur",
+    title: "Caméra — Capteur",
     items: [
       ["Contrôle visuel", "1"],
       ["Recherche de poussières", "1"],
@@ -43,7 +43,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "2. Caméra — Menus",
+    title: "Caméra — Menus",
     items: [
       ["Firmware", "1"],
       ["Reset caméra si nécessaire", "1"],
@@ -66,7 +66,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "2. Caméra — Fonctionnement",
+    title: "Caméra — Fonctionnement",
     items: [
       ["Vérifier tous les boutons", "1,3"],
       ["Vérifier REC", "1,2"],
@@ -83,7 +83,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "3. Viseur",
+    title: "Viseur",
     items: [
       ["Nettoyage", "1"],
       ["Dioptrie", "1"],
@@ -96,7 +96,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "4. Objectifs — État",
+    title: "Objectifs — État",
     items: [
       [
         "État des optiques : frontales, lentilles arrière, rayures, champignons, carrossage, fluidité des bagues, jeu mécanique — photographier tous les défauts",
@@ -105,7 +105,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "4. Objectifs — Calage",
+    title: "Objectifs — Calage",
     items: [
       ["Infini", "1"],
       ["Zoom ramping / linéarité", "1"],
@@ -115,7 +115,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "4. Objectifs — Compatibilité",
+    title: "Objectifs — Compatibilité",
     items: [
       ["Doubleur", "1,2"],
       ["Extender", "1,2"],
@@ -123,7 +123,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "5. Mattebox",
+    title: "Mattebox",
     items: [
       ["État général", "2"],
       ["Tous les bons dos", "2"],
@@ -138,14 +138,14 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "5. Mattebox — Cinetape",
+    title: "Mattebox — Cinetape",
     items: [
       ["Test distance max", "1"],
       ["Câblage spare LCUBE", "1,2"],
     ],
   },
   {
-    title: "6. Filtres",
+    title: "Filtres",
     items: [
       ["État des lieux", "2"],
       ["Identification", "2"],
@@ -156,7 +156,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "7. Follow Focus / HF — Moteurs",
+    title: "Follow Focus / HF — Moteurs",
     items: [
       ["Identifier chaque moteur", "1"],
       ["Tester chaque moteur", "1"],
@@ -166,7 +166,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "7. Follow Focus / HF — Commandes",
+    title: "Follow Focus / HF — Commandes",
     items: [
       ["Appairage", "1"],
       ["Portée", "1"],
@@ -180,7 +180,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "8. Configurations caméra",
+    title: "Configurations caméra",
     items: [
       ["Branche", "2"],
       ["Épaule", "1,2"],
@@ -197,7 +197,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "9. Vidéo — Moniteurs",
+    title: "Vidéo — Moniteurs",
     items: [
       ["État des lieux", "3"],
       ["Backlight", "3"],
@@ -210,14 +210,14 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "9. Vidéo — SDI",
+    title: "Vidéo — SDI",
     items: [
       ["Tester toutes les BNC et touret", "3"],
       ["Tester tous les câbles vidéo", "3"],
     ],
   },
   {
-    title: "9. Vidéo — HF",
+    title: "Vidéo — HF",
     items: [
       ["Appairer tous les HF vidéo", "3"],
       ["Tester qualité image et portée", "3"],
@@ -227,7 +227,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "9. Vidéo — Enregistreur",
+    title: "Vidéo — Enregistreur",
     items: [
       ["REC Trigger", "3"],
       ["Lecture Pix", "3"],
@@ -238,7 +238,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "9. Vidéo — Configurations",
+    title: "Vidéo — Configurations",
     items: [
       ["Roulante vidéo / Combo", "3"],
       ["Kit Réal", "3"],
@@ -248,7 +248,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "10. Data",
+    title: "Data",
     items: [
       ["Identifier toutes les cartes", "2"],
       ["Nommer les cartes", "2"],
@@ -271,7 +271,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "11. Batteries",
+    title: "Batteries",
     items: [
       ["Compter toutes les batteries", "3"],
       ["Identifier chaque batterie", "3"],
@@ -285,7 +285,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "12. Câblage (spares)",
+    title: "Câblage (spares)",
     items: [
       ["BNC", "3"],
       ["LBUS", "2"],
@@ -299,7 +299,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "13. Accessoires",
+    title: "Accessoires",
     items: [
       ["Baseplates", "1"],
       ["Épaulière", "1"],
@@ -313,7 +313,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "14. Machinerie",
+    title: "Machinerie",
     items: [
       ["Support QRP", "2"],
       ["Freins roulantes", "2"],
@@ -323,7 +323,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "15. Protection",
+    title: "Protection",
     items: [
       ["Housses pluie caméra", "2"],
       ["Housses pluie écrans", "3"],
@@ -334,7 +334,7 @@ const SECTIONS: RawSection[] = [
     ],
   },
   {
-    title: "16. Organisation",
+    title: "Organisation",
     items: [
       ["Organiser les sacs accessoires", "2"],
       ["Organiser les sacs batteries", "3"],

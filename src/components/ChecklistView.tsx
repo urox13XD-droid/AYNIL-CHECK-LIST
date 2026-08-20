@@ -180,24 +180,33 @@ function ItemRow({
     disabled: reorderDisabled,
   });
   const hasComment = !!item.comment?.trim();
+  // desktop: the whole row is the drag target; mobile keeps a dedicated handle so touch-scrolling still works
+  const rowDragProps = isMobile ? {} : { ...attributes, ...listeners };
+  const handleDragProps = isMobile ? { ...attributes, ...listeners } : {};
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`group ${isDragging ? "relative z-10 opacity-60" : ""}`}
+      {...rowDragProps}
+      className={`group touch-none ${
+        !isMobile && !reorderDisabled ? "cursor-grab active:cursor-grabbing" : ""
+      } ${isDragging ? "relative z-10 -mx-2 rounded-lg bg-white px-2 shadow-comic-lg" : ""}`}
     >
       <div className={isMobile ? "flex flex-col gap-1 py-1.5" : "flex items-center gap-2 py-1"}>
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
-            {...attributes}
-            {...listeners}
+            {...handleDragProps}
             className={`shrink-0 touch-none text-black/30 ${
-              reorderDisabled ? "cursor-not-allowed opacity-20" : "cursor-grab hover:text-black active:cursor-grabbing"
+              reorderDisabled
+                ? "cursor-not-allowed opacity-20"
+                : isMobile
+                  ? "cursor-grab hover:text-black active:cursor-grabbing"
+                  : "cursor-default opacity-40"
             }`}
-            title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser pour réordonner"}
-            disabled={reorderDisabled}
+            title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser la ligne pour réordonner"}
+            disabled={reorderDisabled || !isMobile}
           >
             <GripIcon />
           </button>
@@ -301,6 +310,7 @@ function ItemRow({
 
 function SectionCard({
   section,
+  number,
   items,
   roles,
   complete,
@@ -317,6 +327,7 @@ function SectionCard({
   onReorderItems,
 }: {
   section: ChecklistSection;
+  number: number;
   items: ChecklistItemState[];
   roles: string[];
   complete: boolean;
@@ -339,6 +350,9 @@ function SectionCard({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const done = items.filter((i) => i.checked).length;
   const collapsed = !!section.collapsed;
+  // desktop: the whole header bar is the drag target; mobile keeps a dedicated handle so touch-scrolling still works
+  const headerDragProps = isMobile ? {} : { ...attributes, ...listeners };
+  const handleDragProps = isMobile ? { ...attributes, ...listeners } : {};
 
   const handleItemDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -350,20 +364,29 @@ function SectionCard({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-xl border-[2.5px] border-black shadow-comic transition-colors ${
-        isDragging ? "relative z-20 opacity-70" : ""
+      className={`rounded-xl border-[2.5px] border-black transition-colors ${
+        isDragging ? "relative z-20 shadow-comic-lg" : "shadow-comic"
       } ${complete ? "bg-green-100" : "bg-white"}`}
     >
-      <div className="flex items-center gap-2 border-black px-3 py-2.5" style={{ borderBottomWidth: collapsed ? 0 : 2.5 }}>
+      <div
+        {...headerDragProps}
+        className={`flex touch-none items-center gap-2 border-black px-3 py-2.5 ${
+          !isMobile && !reorderDisabled ? "cursor-grab active:cursor-grabbing" : ""
+        }`}
+        style={{ borderBottomWidth: collapsed ? 0 : 2.5 }}
+      >
         <button
           type="button"
-          {...attributes}
-          {...listeners}
+          {...handleDragProps}
           className={`shrink-0 touch-none text-black/40 ${
-            reorderDisabled ? "cursor-not-allowed opacity-20" : "cursor-grab hover:text-black active:cursor-grabbing"
+            reorderDisabled
+              ? "cursor-not-allowed opacity-20"
+              : isMobile
+                ? "cursor-grab hover:text-black active:cursor-grabbing"
+                : "cursor-default opacity-40"
           }`}
-          title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser pour réordonner"}
-          disabled={reorderDisabled}
+          title={reorderDisabled ? "Désactivez le filtre pour réorganiser" : "Glisser la section pour réordonner"}
+          disabled={reorderDisabled || !isMobile}
         >
           <GripIcon />
         </button>
@@ -375,7 +398,7 @@ function SectionCard({
           <span className="flex min-w-0 items-center gap-2">
             <Chevron open={!collapsed} />
             <span className="font-display truncate text-sm uppercase tracking-wide">
-              {section.title}
+              {number}. {section.title}
               {section.quantity > 1 ? ` x${section.quantity}` : ""}
             </span>
           </span>
@@ -456,6 +479,10 @@ export function ChecklistView({
   const matchesFilter = (role: string) =>
     filterRoles.length === 0 || filterRoles.includes(role || UNASSIGNED);
 
+  // numbers reflect each section's position in the underlying (unfiltered) order, so they
+  // stay correct even while a role filter hides some sections, and follow the section when dragged
+  const sectionNumbers = new Map(sections.map((s, i) => [s.id, i + 1]));
+
   const visibleSections = sections
     .map((section) => ({ section, items: section.items.filter((i) => matchesFilter(i.role)) }))
     .filter(({ items }) => filterRoles.length === 0 || items.length > 0);
@@ -487,6 +514,7 @@ export function ChecklistView({
               <SectionCard
                 key={section.id}
                 section={section}
+                number={sectionNumbers.get(section.id)!}
                 items={items}
                 roles={roles}
                 complete={items.length > 0 && items.filter((i) => i.checked).length === items.length}
