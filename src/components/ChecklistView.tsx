@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
+  DragStartEvent,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -157,6 +158,7 @@ function ItemRow({
   reorderDisabled,
   commentOpen,
   isMobile,
+  justDraggedRef,
   onToggle,
   onRoleChange,
   onRemoveItem,
@@ -169,6 +171,7 @@ function ItemRow({
   reorderDisabled: boolean;
   commentOpen: boolean;
   isMobile: boolean;
+  justDraggedRef: React.RefObject<string | null>;
   onToggle: (sectionId: string, itemId: string) => void;
   onRoleChange: (sectionId: string, itemId: string, role: string) => void;
   onRemoveItem: (sectionId: string, itemId: string) => void;
@@ -184,11 +187,22 @@ function ItemRow({
   const rowDragProps = isMobile ? {} : { ...attributes, ...listeners };
   const handleDragProps = isMobile ? { ...attributes, ...listeners } : {};
 
+  // dropping a row often ends the pointer back over the checkbox/label, which the browser then
+  // reads as a genuine click — swallow that one click so reordering never toggles the item
+  const swallowClickIfJustDragged = (e: React.MouseEvent) => {
+    if (justDraggedRef.current === item.id) {
+      justDraggedRef.current = null;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...rowDragProps}
+      onClickCapture={swallowClickIfJustDragged}
       className={`group touch-none ${
         !isMobile && !reorderDisabled ? "cursor-grab active:cursor-grabbing" : ""
       } ${isDragging ? "relative z-10 -mx-2 rounded-lg bg-white px-2 shadow-comic-lg" : ""}`}
@@ -315,6 +329,8 @@ function SectionCard({
   roles,
   complete,
   reorderDisabled,
+  forceCollapsed,
+  justDraggedSectionRef,
   openComments,
   isMobile,
   onToggle,
@@ -332,6 +348,8 @@ function SectionCard({
   roles: string[];
   complete: boolean;
   reorderDisabled: boolean;
+  forceCollapsed: boolean;
+  justDraggedSectionRef: React.RefObject<string | null>;
   openComments: Set<string>;
   isMobile: boolean;
   onToggle: (sectionId: string, itemId: string) => void;
@@ -349,15 +367,29 @@ function SectionCard({
   });
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const done = items.filter((i) => i.checked).length;
-  const collapsed = !!section.collapsed;
+  const collapsed = forceCollapsed || !!section.collapsed;
   // desktop: the whole header bar is the drag target; mobile keeps a dedicated handle so touch-scrolling still works
   const headerDragProps = isMobile ? {} : { ...attributes, ...listeners };
   const handleDragProps = isMobile ? { ...attributes, ...listeners } : {};
+  const justDraggedItemRef = useRef<string | null>(null);
 
   const handleItemDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    justDraggedItemRef.current = String(active.id);
+    setTimeout(() => {
+      if (justDraggedItemRef.current === String(active.id)) justDraggedItemRef.current = null;
+    }, 0);
     if (!over || active.id === over.id) return;
     onReorderItems(section.id, String(active.id), String(over.id));
+  };
+
+  // same click-after-drop swallow as items, applied to the collapse toggle
+  const handleCollapseClick = () => {
+    if (justDraggedSectionRef.current === section.id) {
+      justDraggedSectionRef.current = null;
+      return;
+    }
+    onToggleCollapse(section.id);
   };
 
   return (
@@ -392,7 +424,7 @@ function SectionCard({
         </button>
         <button
           type="button"
-          onClick={() => onToggleCollapse(section.id)}
+          onClick={handleCollapseClick}
           className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
         >
           <span className="flex min-w-0 items-center gap-2">
@@ -419,6 +451,7 @@ function SectionCard({
                     reorderDisabled={reorderDisabled}
                     commentOpen={openComments.has(item.id)}
                     isMobile={isMobile}
+                    justDraggedRef={justDraggedItemRef}
                     onToggle={onToggle}
                     onRoleChange={onRoleChange}
                     onRemoveItem={onRemoveItem}
@@ -465,6 +498,8 @@ export function ChecklistView({
 }) {
   const [filterRoles, setFilterRoles] = useState<string[]>([]);
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [sectionDragActive, setSectionDragActive] = useState(false);
+  const justDraggedSectionRef = useRef<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const toggleComment = (itemId: string) => {
@@ -491,10 +526,26 @@ export function ChecklistView({
   const totalDone = allVisibleItems.filter((i) => i.checked).length;
   const reorderDisabled = filterRoles.length > 0;
 
+  // collapsing every section while one is being dragged avoids the layout jumping around when a
+  // collapsed section passes over an expanded one (their heights can differ by a lot)
+  const handleSectionDragStart = (event: DragStartEvent) => {
+    justDraggedSectionRef.current = String(event.active.id);
+    setSectionDragActive(true);
+  };
+
   const handleSectionDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setSectionDragActive(false);
+    setTimeout(() => {
+      if (justDraggedSectionRef.current === String(active.id)) justDraggedSectionRef.current = null;
+    }, 0);
     if (!over || active.id === over.id) return;
     onReorderSections(String(active.id), String(over.id));
+  };
+
+  const handleSectionDragCancel = () => {
+    setSectionDragActive(false);
+    justDraggedSectionRef.current = null;
   };
 
   return (
@@ -507,7 +558,13 @@ export function ChecklistView({
         </div>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleSectionDragStart}
+        onDragEnd={handleSectionDragEnd}
+        onDragCancel={handleSectionDragCancel}
+      >
         <SortableContext items={visibleSections.map(({ section }) => section.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-5">
             {visibleSections.map(({ section, items }) => (
@@ -519,6 +576,8 @@ export function ChecklistView({
                 roles={roles}
                 complete={items.length > 0 && items.filter((i) => i.checked).length === items.length}
                 reorderDisabled={reorderDisabled}
+                forceCollapsed={sectionDragActive}
+                justDraggedSectionRef={justDraggedSectionRef}
                 openComments={openComments}
                 isMobile={isMobile}
                 onToggle={onToggle}
