@@ -30,19 +30,15 @@ export interface Role {
   assigneeName?: string;
 }
 
-/** quick-pick swatches offered in the role color picker, also cycled through for new roles' default color */
+/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color */
 export const ROLE_COLOR_PALETTE = [
   "#ef4444",
   "#f97316",
   "#eab308",
-  "#84cc16",
   "#22c55e",
   "#14b8a6",
   "#3b82f6",
-  "#6366f1",
-  "#8b5cf6",
-  "#ec4899",
-  "#78716c",
+  "#a855f7",
 ];
 
 export function defaultRoles(names: string[]): Role[] {

@@ -8,36 +8,58 @@ import { useClickOutside } from "@/lib/useClickOutside";
 
 export type ExportMode = "blank" | "full";
 
+/** small colored square next to a role's name; clicking it opens a compact preset-color picker (an 8th slot opens a native color dialog for a custom color) */
 function RoleColorPicker({ role, onChange }: { role: Role; onChange: (color: string) => void }) {
+  const [open, setOpen] = useState(false);
   const customInputRef = useRef<HTMLInputElement>(null);
+  const ref = useClickOutside<HTMLDivElement>(open, () => setOpen(false));
+
+  const pick = (color: string) => {
+    onChange(color);
+    setOpen(false);
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {ROLE_COLOR_PALETTE.map((c) => (
-        <button
-          key={c}
-          type="button"
-          title={c}
-          onClick={() => onChange(c)}
-          style={{ backgroundColor: c, boxShadow: role.color === c ? "0 0 0 2px #000" : undefined }}
-          className="h-4 w-4 shrink-0 rounded-sm border border-black/30"
-        />
-      ))}
+    <div ref={ref} className="relative shrink-0">
       <button
         type="button"
-        title="Autre couleur…"
-        onClick={() => customInputRef.current?.click()}
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-black/30 bg-[conic-gradient(from_0deg,red,yellow,lime,cyan,blue,magenta,red)] text-[8px] font-black text-white"
-        style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}
-      >
-        +
-      </button>
-      <input
-        ref={customInputRef}
-        type="color"
-        value={role.color}
-        onChange={(e) => onChange(e.target.value)}
-        className="hidden"
+        title="Choisir une couleur"
+        onClick={() => setOpen((v) => !v)}
+        style={{ backgroundColor: role.color }}
+        className="h-5 w-5 shrink-0 rounded-md border-[1.5px] border-black"
       />
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1.5 w-36 rounded-lg border-[2px] border-black bg-white p-2 shadow-comic-lg">
+          <div className="grid grid-cols-4 gap-1.5">
+            {ROLE_COLOR_PALETTE.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={c}
+                onClick={() => pick(c)}
+                style={{ backgroundColor: c, boxShadow: role.color === c ? "0 0 0 2px #000" : undefined }}
+                className="h-7 w-7 rounded-md border border-black/30"
+              />
+            ))}
+            <button
+              type="button"
+              title="Autre couleur…"
+              onClick={() => customInputRef.current?.click()}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-black/30 bg-[conic-gradient(from_0deg,red,yellow,lime,cyan,blue,magenta,red)] text-[10px] font-black text-white"
+              style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}
+            >
+              +
+            </button>
+          </div>
+          <input
+            ref={customInputRef}
+            type="color"
+            value={role.color}
+            onChange={(e) => pick(e.target.value)}
+            className="hidden"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -96,18 +118,20 @@ export function Toolbar({
         Rôles
       </ComicButton>
       {rolesOpen && (
-        <div className={`absolute ${align}-0 z-20 mt-2 w-72 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg`}>
+        <div className={`absolute ${align}-0 z-20 mt-2 w-64 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg`}>
           <p className="font-display mb-2 text-[11px] font-bold uppercase tracking-wider">
             Rôles disponibles
           </p>
           <div className="mb-2 flex flex-col gap-2">
             {roles.map((r) => (
               <div key={r.name} className="flex flex-col gap-1.5 border-b-[1.5px] border-black/10 pb-2 last:border-b-0 last:pb-0">
-                <span className="truncate text-xs font-bold">{r.name}</span>
-                <RoleColorPicker
-                  role={r}
-                  onChange={(color) => onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, color } : x)))}
-                />
+                <div className="flex items-center gap-2">
+                  <RoleColorPicker
+                    role={r}
+                    onChange={(color) => onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, color } : x)))}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-xs font-bold">{r.name}</span>
+                </div>
                 <input
                   value={r.assigneeName ?? ""}
                   onChange={(e) =>
