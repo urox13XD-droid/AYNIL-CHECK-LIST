@@ -30,19 +30,27 @@ export interface Role {
   assigneeName?: string;
 }
 
-/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color */
+/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color — kept pale/pastel so black text stays readable on top */
 export const ROLE_COLOR_PALETTE = [
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#14b8a6",
-  "#3b82f6",
-  "#a855f7",
+  "#f4a6a0",
+  "#f5c396",
+  "#f0e08a",
+  "#a8d8a2",
+  "#8fd4c1",
+  "#a8c8f0",
+  "#c9a8e0",
 ];
 
 export function defaultRoles(names: string[]): Role[] {
   return names.map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }));
+}
+
+/** the too-saturated palette this replaced — colors auto-assigned from it are remapped to the new pale one at the same index, so already-saved roles pick up the softer look too */
+const LEGACY_VIVID_PALETTE = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7"];
+
+function migrateLegacyColor(color: string): string {
+  const idx = LEGACY_VIVID_PALETTE.indexOf(color);
+  return idx === -1 ? color : ROLE_COLOR_PALETTE[idx % ROLE_COLOR_PALETTE.length];
 }
 
 const CURRENT_KEY = "aynil-checklist:current";
@@ -107,7 +115,7 @@ export function loadRoles(defaultNames: string[]): Role[] {
         ? { name: r, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
         : {
             name: (r as Role).name,
-            color: (r as Role).color || ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length],
+            color: migrateLegacyColor((r as Role).color) || ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length],
             assigneeName: (r as Role).assigneeName,
           }
     );
