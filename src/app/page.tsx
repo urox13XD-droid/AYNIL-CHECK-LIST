@@ -247,6 +247,13 @@ export default function Home() {
       return;
     }
     setSession({ loaded: true, projectId: newProjectId(), ...EMPTY_SESSION });
+    // a name typed into a role (e.g. "Roger") is who's on THIS shoot — it shouldn't
+    // follow into a fresh checklist, unlike the role/poste list itself and its colors
+    setRoles((prev) => {
+      const cleared = prev.map((r) => ({ ...r, assigneeName: undefined }));
+      saveRoles(cleared);
+      return cleared;
+    });
   }, [session.sections.length]);
 
   const handleExportProject = useCallback(

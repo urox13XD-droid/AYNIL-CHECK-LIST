@@ -30,7 +30,7 @@ export interface Role {
   assigneeName?: string;
 }
 
-/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color — pale and spread across distinct hues so adjacent ones don't blend together */
+/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for a custom role's default color — pale and spread across distinct hues so adjacent ones don't blend together */
 export const ROLE_COLOR_PALETTE = [
   "#ffd5d2",
   "#fedec8",
@@ -41,22 +41,32 @@ export const ROLE_COLOR_PALETTE = [
   "#dfd8fd",
 ];
 
-export function defaultRoles(names: string[]): Role[] {
-  return names.map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }));
+/** fixed identity color per default role/poste, as specified — distinct on purpose so they're never confused for one another */
+export const DEFAULT_ROLE_COLORS: Record<string, string> = {
+  "1er assistant caméra": "#8bc34a",
+  "2e assistant caméra": "#c8e6c9",
+  "3e assistant caméra / vidéo": "#bbdefb",
+  "Assistant vidéo / HF": "#c5cae9",
+  "Chef opérateur": "#7c4dff",
+  DIT: "#d81b60",
+};
+
+/** every color a default role has ever been auto-assigned across past palette iterations — used below to tell "still whatever default it was given" apart from "the user genuinely picked this color" */
+const AUTO_ASSIGNED_LEGACY_COLORS = new Set([
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7",
+  "#f4a6a0", "#f5c396", "#f0e08a", "#a8d8a2", "#8fd4c1", "#a8c8f0", "#c9a8e0",
+  "#ffd5d2", "#fedec8", "#f8e6a0", "#baf3db", "#c6edfb", "#cce0ff", "#dfd8fd",
+]);
+
+/** resolves the color a role should have: its fixed identity color if it has one and hasn't been deliberately customized away from it, otherwise whatever is already stored, otherwise a palette color cycled by position */
+function colorForRole(name: string, storedColor: string | undefined, indexFallback: number): string {
+  const fixed = DEFAULT_ROLE_COLORS[name];
+  if (fixed && (!storedColor || AUTO_ASSIGNED_LEGACY_COLORS.has(storedColor))) return fixed;
+  return storedColor || ROLE_COLOR_PALETTE[indexFallback % ROLE_COLOR_PALETTE.length];
 }
 
-/** earlier palettes this replaced — colors auto-assigned from any of them are remapped to the current one at the same index, so already-saved roles pick up each new look too */
-const LEGACY_PALETTES = [
-  ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7"],
-  ["#f4a6a0", "#f5c396", "#f0e08a", "#a8d8a2", "#8fd4c1", "#a8c8f0", "#c9a8e0"],
-];
-
-function migrateLegacyColor(color: string): string {
-  for (const palette of LEGACY_PALETTES) {
-    const idx = palette.indexOf(color);
-    if (idx !== -1) return ROLE_COLOR_PALETTE[idx % ROLE_COLOR_PALETTE.length];
-  }
-  return color;
+export function defaultRoles(names: string[]): Role[] {
+  return names.map((name, i) => ({ name, color: colorForRole(name, undefined, i) }));
 }
 
 const CURRENT_KEY = "aynil-checklist:current";
@@ -119,16 +129,16 @@ export function loadRoles(defaultNames: string[]): Role[] {
     if (!Array.isArray(parsed)) return defaultRoles(defaultNames);
     const loaded: Role[] = parsed.map((r, i) =>
       typeof r === "string"
-        ? { name: r, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
+        ? { name: r, color: colorForRole(r, undefined, i) }
         : {
             name: (r as Role).name,
-            color: migrateLegacyColor((r as Role).color) || ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length],
+            color: colorForRole((r as Role).name, (r as Role).color, i),
             assigneeName: (r as Role).assigneeName,
           }
     );
     const byName = new Map(loaded.map((r) => [r.name, r]));
     const orderedDefaults = defaultNames.map(
-      (name, i): Role => byName.get(name) ?? { name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
+      (name, i): Role => byName.get(name) ?? { name, color: colorForRole(name, undefined, i) }
     );
     const customRoles = loaded.filter((r) => !defaultNames.includes(r.name));
     return [...orderedDefaults, ...customRoles];
