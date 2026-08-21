@@ -30,27 +30,33 @@ export interface Role {
   assigneeName?: string;
 }
 
-/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color — kept pale/pastel so black text stays readable on top */
+/** quick-pick swatches offered in the role color picker (an 8th, custom slot opens a native picker), also cycled through for new roles' default color — pale and spread across distinct hues so adjacent ones don't blend together */
 export const ROLE_COLOR_PALETTE = [
-  "#f4a6a0",
-  "#f5c396",
-  "#f0e08a",
-  "#a8d8a2",
-  "#8fd4c1",
-  "#a8c8f0",
-  "#c9a8e0",
+  "#ffd5d2",
+  "#fedec8",
+  "#f8e6a0",
+  "#baf3db",
+  "#c6edfb",
+  "#cce0ff",
+  "#dfd8fd",
 ];
 
 export function defaultRoles(names: string[]): Role[] {
   return names.map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }));
 }
 
-/** the too-saturated palette this replaced — colors auto-assigned from it are remapped to the new pale one at the same index, so already-saved roles pick up the softer look too */
-const LEGACY_VIVID_PALETTE = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7"];
+/** earlier palettes this replaced — colors auto-assigned from any of them are remapped to the current one at the same index, so already-saved roles pick up each new look too */
+const LEGACY_PALETTES = [
+  ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7"],
+  ["#f4a6a0", "#f5c396", "#f0e08a", "#a8d8a2", "#8fd4c1", "#a8c8f0", "#c9a8e0"],
+];
 
 function migrateLegacyColor(color: string): string {
-  const idx = LEGACY_VIVID_PALETTE.indexOf(color);
-  return idx === -1 ? color : ROLE_COLOR_PALETTE[idx % ROLE_COLOR_PALETTE.length];
+  for (const palette of LEGACY_PALETTES) {
+    const idx = palette.indexOf(color);
+    if (idx !== -1) return ROLE_COLOR_PALETTE[idx % ROLE_COLOR_PALETTE.length];
+  }
+  return color;
 }
 
 const CURRENT_KEY = "aynil-checklist:current";
@@ -99,9 +105,10 @@ export function newProjectId(): string {
 
 /**
  * Accepts both the current Role[] shape and the legacy plain string[] shape, so existing
- * localStorage keeps working. Also heals back in any default role missing from a previously
- * saved list (from before role deletion was disabled) — otherwise every checklist item still
- * pointing at that role name would show as unassigned.
+ * localStorage keeps working. Default roles always come back in their canonical order (healing
+ * back in any that went missing from a previously saved list, from before role deletion was
+ * disabled — otherwise every checklist item still pointing at that role name would show as
+ * unassigned); any role the user added beyond the defaults follows, in the order it was added.
  */
 export function loadRoles(defaultNames: string[]): Role[] {
   if (typeof window === "undefined") return defaultRoles(defaultNames);
@@ -119,11 +126,12 @@ export function loadRoles(defaultNames: string[]): Role[] {
             assigneeName: (r as Role).assigneeName,
           }
     );
-    const known = new Set(loaded.map((r) => r.name));
-    const healed = defaultNames
-      .filter((name) => !known.has(name))
-      .map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[(loaded.length + i) % ROLE_COLOR_PALETTE.length] }));
-    return [...loaded, ...healed];
+    const byName = new Map(loaded.map((r) => [r.name, r]));
+    const orderedDefaults = defaultNames.map(
+      (name, i): Role => byName.get(name) ?? { name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
+    );
+    const customRoles = loaded.filter((r) => !defaultNames.includes(r.name));
+    return [...orderedDefaults, ...customRoles];
   } catch {
     return defaultRoles(defaultNames);
   }

@@ -132,16 +132,30 @@ export function Toolbar({
                   />
                   <span className="min-w-0 flex-1 truncate text-xs font-bold">{r.name}</span>
                 </div>
-                <input
-                  value={r.assigneeName ?? ""}
-                  onChange={(e) =>
-                    onRolesChange(
-                      roles.map((x) => (x.name === r.name ? { ...x, assigneeName: e.target.value } : x))
-                    )
-                  }
-                  placeholder="Nom de la personne (ex : Magalie)"
-                  className="w-full rounded-md border-[1.5px] border-black/30 px-2 py-1 text-[11px] font-semibold outline-none focus:border-black"
-                />
+                <div className="relative">
+                  <input
+                    value={r.assigneeName ?? ""}
+                    onChange={(e) =>
+                      onRolesChange(
+                        roles.map((x) => (x.name === r.name ? { ...x, assigneeName: e.target.value } : x))
+                      )
+                    }
+                    placeholder="Nom"
+                    className="w-full rounded-md border-[1.5px] border-black/30 px-2 py-1 pr-6 text-[11px] font-semibold outline-none focus:border-black"
+                  />
+                  {!!r.assigneeName && (
+                    <button
+                      type="button"
+                      title="Effacer le nom"
+                      onClick={() =>
+                        onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, assigneeName: "" } : x)))
+                      }
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold opacity-40 hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
