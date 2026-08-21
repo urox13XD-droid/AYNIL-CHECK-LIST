@@ -25,8 +25,15 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** 3-digit code, always in [100, 999] so it never has a leading zero */
+function generateCode(): string {
+  return String(Math.floor(100 + Math.random() * 900));
+}
+
 export function useSharedSession(current: SharedPayload, applyRemote: (payload: SharedPayload) => void) {
   const [sessionName, setSessionName] = useState<string | null>(null);
+  const [sessionCode, setSessionCode] = useState<string | null>(null);
+  const [rowId, setRowId] = useState<string | null>(null);
   const [status, setStatus] = useState<SyncStatus>("offline");
   const [error, setError] = useState<string | null>(null);
 
@@ -40,41 +47,74 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
     }
     lastSyncedJson.current = null;
     setSessionName(null);
+    setSessionCode(null);
+    setRowId(null);
     setStatus("offline");
     setError(null);
   }, []);
 
   const join = useCallback(
-    async (rawName: string) => {
+    async (rawName: string, rawCode?: string) => {
       if (!supabase) {
         setError("Le partage n'est pas configuré sur ce déploiement.");
         setStatus("error");
         return;
       }
-      const id = slugify(rawName);
-      if (!id) return;
+      const slug = slugify(rawName);
+      if (!slug) return;
+      const code = rawCode?.trim();
+      if (code && !/^\d{3}$/.test(code)) {
+        setError("Le code doit être composé de 3 chiffres.");
+        setStatus("error");
+        return;
+      }
 
       setStatus("connecting");
       setError(null);
 
       try {
-        const { data: existing, error: fetchError } = await supabase
-          .from("checklist_sessions")
-          .select("data")
-          .eq("id", id)
-          .maybeSingle();
+        let id: string;
+        let finalCode: string;
 
-        if (fetchError) {
-          setError(fetchError.message);
-          setStatus("error");
-          return;
-        }
+        if (code) {
+          // joining a specific, already-existing session — name + code must both match
+          id = `${slug}-${code}`;
+          const { data: existing, error: fetchError } = await supabase
+            .from("checklist_sessions")
+            .select("data")
+            .eq("id", id)
+            .maybeSingle();
 
-        if (existing) {
+          if (fetchError) {
+            setError(fetchError.message);
+            setStatus("error");
+            return;
+          }
+          if (!existing) {
+            setError("Session introuvable — vérifie le nom et le code.");
+            setStatus("error");
+            return;
+          }
           const payload = existing.data as SharedPayload;
           lastSyncedJson.current = JSON.stringify(payload);
           applyRemote(payload);
+          finalCode = code;
         } else {
+          // no code given — create a brand new session under a freshly generated one, so
+          // two different teams naming their session the same thing never collide
+          let attempts = 0;
+          for (;;) {
+            finalCode = generateCode();
+            id = `${slug}-${finalCode}`;
+            const { data: clash } = await supabase.from("checklist_sessions").select("id").eq("id", id).maybeSingle();
+            if (!clash) break;
+            attempts += 1;
+            if (attempts > 20) {
+              setError("Impossible de générer un code de session, réessaie.");
+              setStatus("error");
+              return;
+            }
+          }
           const payload = current;
           const { error: insertError } = await supabase.from("checklist_sessions").insert({ id, data: payload });
           if (insertError) {
@@ -101,7 +141,9 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
           .subscribe();
         channelRef.current = channel;
 
-        setSessionName(id);
+        setRowId(id);
+        setSessionName(slug);
+        setSessionCode(finalCode);
         setStatus("synced");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Impossible de joindre le serveur de partage.");
@@ -114,13 +156,13 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
   // debounced push whenever local state drifts from what's on the server
   useEffect(() => {
     const client = supabase;
-    if (!sessionName || !client) return;
+    if (!rowId || !client) return;
     const json = JSON.stringify(current);
     if (json === lastSyncedJson.current) return;
 
     const t = setTimeout(async () => {
       try {
-        const { error: updateError } = await client.from("checklist_sessions").update({ data: current }).eq("id", sessionName);
+        const { error: updateError } = await client.from("checklist_sessions").update({ data: current }).eq("id", rowId);
         lastSyncedJson.current = json;
         setStatus(updateError ? "error" : "synced");
         if (updateError) setError(updateError.message);
@@ -131,12 +173,12 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
     }, PUSH_DEBOUNCE_MS);
 
     return () => clearTimeout(t);
-  }, [sessionName, current]);
+  }, [rowId, current]);
 
   // leave the channel behind on unmount
   useEffect(() => () => {
     if (channelRef.current) supabase?.removeChannel(channelRef.current);
   }, []);
 
-  return { sessionName, status, error, join, leave };
+  return { sessionName, sessionCode, status, error, join, leave };
 }

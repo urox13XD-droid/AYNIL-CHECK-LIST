@@ -20,18 +20,21 @@ const STATUS_DOT: Record<SyncStatus, string> = {
 
 export function SharedSessionBar({
   sessionName,
+  sessionCode,
   status,
   error,
   onJoin,
   onLeave,
 }: {
   sessionName: string | null;
+  sessionCode: string | null;
   status: SyncStatus;
   error: string | null;
-  onJoin: (name: string) => void;
+  onJoin: (name: string, code?: string) => void;
   onLeave: () => void;
 }) {
-  const [draft, setDraft] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [draftCode, setDraftCode] = useState("");
 
   if (sessionName) {
     return (
@@ -40,6 +43,11 @@ export function SharedSessionBar({
         <span className="text-xs font-bold uppercase tracking-wide">
           Session partagée : <span className="font-mono normal-case">{sessionName}</span>
         </span>
+        {sessionCode && (
+          <span className="rounded-md border-[1.5px] border-black bg-white px-1.5 py-0.5 font-mono text-xs font-bold tracking-wider">
+            {sessionCode}
+          </span>
+        )}
         <span className="text-[10px] font-semibold text-black/50">{STATUS_LABEL[status]}</span>
         {error && <span className="text-[10px] font-semibold text-red-600">{error}</span>}
         <ComicButton onClick={onLeave} className="ml-auto">
@@ -51,19 +59,28 @@ export function SharedSessionBar({
 
   return (
     <form
-      className="no-print flex items-center gap-2 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5"
+      className="no-print flex flex-wrap items-center gap-2 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5"
       onSubmit={(e) => {
         e.preventDefault();
-        const v = draft.trim();
-        if (v) onJoin(v);
+        const name = draftName.trim();
+        const code = draftCode.trim();
+        if (name) onJoin(name, code || undefined);
       }}
     >
       <span className="text-[10px] font-bold uppercase tracking-wide text-black/60">Session partagée</span>
       <input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        value={draftName}
+        onChange={(e) => setDraftName(e.target.value)}
         placeholder="Nom de session (ex. tournage-toto)"
         className="min-w-0 max-w-xs flex-1 rounded-md border-[1.5px] border-black/40 bg-white px-2 py-1 text-xs font-semibold outline-none focus:border-black"
+      />
+      <input
+        value={draftCode}
+        onChange={(e) => setDraftCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
+        placeholder="Code (3 chiffres)"
+        title="Laisser vide pour créer une nouvelle session — un code sera généré automatiquement"
+        inputMode="numeric"
+        className="w-28 shrink-0 rounded-md border-[1.5px] border-black/40 bg-white px-2 py-1 font-mono text-xs font-semibold outline-none focus:border-black"
       />
       <ComicButton type="submit">Rejoindre / Créer</ComicButton>
       {error && <span className="text-[10px] font-semibold text-red-600">{error}</span>}

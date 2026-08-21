@@ -374,6 +374,7 @@ export default function Home() {
       {!focusMode && (
         <SharedSessionBar
           sessionName={shared.sessionName}
+          sessionCode={shared.sessionCode}
           status={shared.status}
           error={shared.error}
           onJoin={shared.join}
