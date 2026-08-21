@@ -254,6 +254,19 @@ export function Toolbar({
     </>
   );
 
+  const sharedSessionRow = (
+    <div className="flex items-center justify-end gap-2">
+      <SharedSessionBar
+        sessionName={sessionName}
+        sessionCode={sessionCode}
+        status={sessionStatus}
+        error={sessionError}
+        onJoin={onJoinSession}
+        onLeave={onLeaveSession}
+      />
+    </div>
+  );
+
   if (isMobile) {
     return (
       <header className="no-print flex flex-col gap-2 border-b-[3px] border-black bg-white px-3 py-2">
@@ -273,49 +286,34 @@ export function Toolbar({
           <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
           {exportMenu("left")}
           {printButtons}
-          <div className="mx-1 h-6 w-[1.5px] shrink-0 bg-black/10" />
-          <SharedSessionBar
-            sessionName={sessionName}
-            sessionCode={sessionCode}
-            status={sessionStatus}
-            error={sessionError}
-            onJoin={onJoinSession}
-            onLeave={onLeaveSession}
-          />
         </div>
+        {sharedSessionRow}
       </header>
     );
   }
 
   return (
-    <header className="no-print flex items-center gap-4 overflow-x-auto border-b-[3px] border-black bg-white px-4 py-2.5">
-      <Logo subtitle="CHECK LIST" />
+    <header className="no-print flex flex-col gap-2 border-b-[3px] border-black bg-white px-4 py-2.5">
+      <div className="flex items-center gap-4">
+        <Logo subtitle="CHECK LIST" />
 
-      <div className="mx-2 h-10 w-[2.5px] shrink-0 bg-black/10" />
+        <div className="mx-2 h-10 w-[2.5px] shrink-0 bg-black/10" />
 
-      <input
-        value={title}
-        onChange={(e) => onTitleChange(e.target.value)}
-        className="font-display min-w-[160px] flex-1 rounded-lg border-[2px] border-black bg-white px-3 py-1.5 text-sm font-bold outline-none focus:shadow-comic-sm"
-        placeholder="Nom du tournage…"
-      />
+        <input
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          className="font-display min-w-0 flex-1 rounded-lg border-[2px] border-black bg-white px-3 py-1.5 text-sm font-bold outline-none focus:shadow-comic-sm"
+          placeholder="Nom du tournage…"
+        />
 
-      {rolesMenu("right")}
-      {openButton}
-      <ComicButton onClick={onNew}>Nouveau</ComicButton>
-      <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
-      {exportMenu("right")}
-      {printButtons}
-
-      <div className="mx-1 h-8 w-[1.5px] shrink-0 bg-black/10" />
-      <SharedSessionBar
-        sessionName={sessionName}
-        sessionCode={sessionCode}
-        status={sessionStatus}
-        error={sessionError}
-        onJoin={onJoinSession}
-        onLeave={onLeaveSession}
-      />
+        {rolesMenu("right")}
+        {openButton}
+        <ComicButton onClick={onNew}>Nouveau</ComicButton>
+        <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
+        {exportMenu("right")}
+        {printButtons}
+      </div>
+      {sharedSessionRow}
     </header>
   );
 }
