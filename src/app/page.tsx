@@ -6,7 +6,6 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
 import { ChecklistView } from "@/components/ChecklistView";
-import { SharedSessionBar } from "@/components/SharedSessionBar";
 import { ComicButton } from "@/components/ComicButton";
 import { DEFAULT_ROLES } from "@/lib/catalog";
 import { generateSections } from "@/lib/generate";
@@ -368,17 +367,13 @@ export default function Home() {
           onLoadMasterChecklist={handleLoadMasterChecklist}
           roles={roles}
           onRolesChange={handleRolesChange}
-          isMobile={isMobile}
-        />
-      )}
-      {!focusMode && (
-        <SharedSessionBar
           sessionName={shared.sessionName}
           sessionCode={shared.sessionCode}
-          status={shared.status}
-          error={shared.error}
-          onJoin={shared.join}
-          onLeave={shared.leave}
+          sessionStatus={shared.status}
+          sessionError={shared.error}
+          onJoinSession={shared.join}
+          onLeaveSession={shared.leave}
+          isMobile={isMobile}
         />
       )}
       <div className={`relative flex min-h-0 flex-1 ${isMobile ? "flex-col overflow-y-auto" : ""}`}>

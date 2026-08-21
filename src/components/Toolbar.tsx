@@ -3,8 +3,10 @@
 import { useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ComicButton } from "@/components/ComicButton";
+import { SharedSessionBar } from "@/components/SharedSessionBar";
 import { ROLE_COLOR_PALETTE, Role } from "@/lib/storage";
 import { useClickOutside } from "@/lib/useClickOutside";
+import { SyncStatus } from "@/lib/useSharedSession";
 
 export type ExportMode = "blank" | "full";
 
@@ -75,6 +77,12 @@ export function Toolbar({
   onLoadMasterChecklist,
   roles,
   onRolesChange,
+  sessionName,
+  sessionCode,
+  sessionStatus,
+  sessionError,
+  onJoinSession,
+  onLeaveSession,
   isMobile = false,
 }: {
   title: string;
@@ -87,6 +95,12 @@ export function Toolbar({
   onLoadMasterChecklist: () => void;
   roles: Role[];
   onRolesChange: (roles: Role[]) => void;
+  sessionName: string | null;
+  sessionCode: string | null;
+  sessionStatus: SyncStatus;
+  sessionError: string | null;
+  onJoinSession: (name: string, code?: string) => void;
+  onLeaveSession: () => void;
   /** stacks title and actions on two rows, actions in a horizontally scrollable strip, so a phone-width screen doesn't have to fit everything at once */
   isMobile?: boolean;
 }) {
@@ -259,13 +273,22 @@ export function Toolbar({
           <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
           {exportMenu("left")}
           {printButtons}
+          <div className="mx-1 h-6 w-[1.5px] shrink-0 bg-black/10" />
+          <SharedSessionBar
+            sessionName={sessionName}
+            sessionCode={sessionCode}
+            status={sessionStatus}
+            error={sessionError}
+            onJoin={onJoinSession}
+            onLeave={onLeaveSession}
+          />
         </div>
       </header>
     );
   }
 
   return (
-    <header className="no-print flex items-center gap-4 border-b-[3px] border-black bg-white px-4 py-2.5">
+    <header className="no-print flex items-center gap-4 overflow-x-auto border-b-[3px] border-black bg-white px-4 py-2.5">
       <Logo subtitle="CHECK LIST" />
 
       <div className="mx-2 h-10 w-[2.5px] shrink-0 bg-black/10" />
@@ -273,7 +296,7 @@ export function Toolbar({
       <input
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
-        className="font-display min-w-0 flex-1 rounded-lg border-[2px] border-black bg-white px-3 py-1.5 text-sm font-bold outline-none focus:shadow-comic-sm"
+        className="font-display min-w-[160px] flex-1 rounded-lg border-[2px] border-black bg-white px-3 py-1.5 text-sm font-bold outline-none focus:shadow-comic-sm"
         placeholder="Nom du tournage…"
       />
 
@@ -283,6 +306,16 @@ export function Toolbar({
       <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
       {exportMenu("right")}
       {printButtons}
+
+      <div className="mx-1 h-8 w-[1.5px] shrink-0 bg-black/10" />
+      <SharedSessionBar
+        sessionName={sessionName}
+        sessionCode={sessionCode}
+        status={sessionStatus}
+        error={sessionError}
+        onJoin={onJoinSession}
+        onLeave={onLeaveSession}
+      />
     </header>
   );
 }

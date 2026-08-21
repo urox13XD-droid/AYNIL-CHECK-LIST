@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ComicButton } from "@/components/ComicButton";
 import { SyncStatus } from "@/lib/useSharedSession";
 
-const STATUS_LABEL: Record<SyncStatus, string> = {
-  offline: "Hors ligne",
-  connecting: "Synchronisation…",
-  synced: "Synchronisé",
-  error: "Erreur de synchro",
-};
+/** ComicButton's look at a smaller scale, for the compact controls in the Toolbar */
+function CompactButton({ children, type = "button", onClick }: { children: React.ReactNode; type?: "button" | "submit"; onClick?: () => void }) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      className="shrink-0 rounded-md border-[1.5px] border-black bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black transition hover:bg-black hover:text-white active:translate-x-[1px] active:translate-y-[1px]"
+    >
+      {children}
+    </button>
+  );
+}
 
 const STATUS_DOT: Record<SyncStatus, string> = {
   offline: "bg-black/30",
@@ -18,6 +23,14 @@ const STATUS_DOT: Record<SyncStatus, string> = {
   error: "bg-red-600",
 };
 
+const STATUS_LABEL: Record<SyncStatus, string> = {
+  offline: "Hors ligne",
+  connecting: "Synchronisation…",
+  synced: "Synchronisé",
+  error: "Erreur de synchro",
+};
+
+/** compact, sits inline at the right edge of the Toolbar — same spot/scale as the shared-session controls on AYNIL Condition Report */
 export function SharedSessionBar({
   sessionName,
   sessionCode,
@@ -38,28 +51,29 @@ export function SharedSessionBar({
 
   if (sessionName) {
     return (
-      <div className="no-print flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5">
-        <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[status]}`} />
-        <span className="text-xs font-bold uppercase tracking-wide">
-          Session partagée : <span className="font-mono normal-case">{sessionName}</span>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[status]}`} title={STATUS_LABEL[status]} />
+        <span className="max-w-[100px] truncate font-mono text-[11px] font-bold" title={sessionName}>
+          {sessionName}
         </span>
         {sessionCode && (
-          <span className="rounded-md border-[1.5px] border-black bg-white px-1.5 py-0.5 font-mono text-xs font-bold tracking-wider">
+          <span className="rounded-md border-[1.5px] border-black bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wider">
             {sessionCode}
           </span>
         )}
-        <span className="text-[10px] font-semibold text-black/50">{STATUS_LABEL[status]}</span>
-        {error && <span className="text-[10px] font-semibold text-red-600">{error}</span>}
-        <ComicButton onClick={onLeave} className="ml-auto">
-          Quitter la session
-        </ComicButton>
+        {error && (
+          <span className="max-w-[140px] truncate text-[10px] font-semibold text-red-600" title={error}>
+            {error}
+          </span>
+        )}
+        <CompactButton onClick={onLeave}>Quitter</CompactButton>
       </div>
     );
   }
 
   return (
     <form
-      className="no-print flex flex-wrap items-center gap-2 border-b-[2.5px] border-black bg-black/5 px-4 py-1.5"
+      className="flex shrink-0 items-center gap-1.5"
       onSubmit={(e) => {
         e.preventDefault();
         const name = draftName.trim();
@@ -67,23 +81,26 @@ export function SharedSessionBar({
         if (name) onJoin(name, code || undefined);
       }}
     >
-      <span className="text-[10px] font-bold uppercase tracking-wide text-black/60">Session partagée</span>
       <input
         value={draftName}
         onChange={(e) => setDraftName(e.target.value)}
-        placeholder="Nom de session (ex. tournage-toto)"
-        className="min-w-0 max-w-xs flex-1 rounded-md border-[1.5px] border-black/40 bg-white px-2 py-1 text-xs font-semibold outline-none focus:border-black"
+        placeholder="Session (ex. tournage)"
+        className="w-32 min-w-0 rounded-md border-[1.5px] border-black/30 bg-white px-2 py-1 text-[10px] font-semibold outline-none focus:border-black"
       />
       <input
         value={draftCode}
         onChange={(e) => setDraftCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
-        placeholder="Code (3 chiffres)"
-        title="Laisser vide pour créer une nouvelle session — un code sera généré automatiquement"
+        placeholder="Code"
+        title="Laisse vide pour générer un code automatiquement, ou choisis-en un toi-même"
         inputMode="numeric"
-        className="w-28 shrink-0 rounded-md border-[1.5px] border-black/40 bg-white px-2 py-1 font-mono text-xs font-semibold outline-none focus:border-black"
+        className="w-12 shrink-0 rounded-md border-[1.5px] border-black/30 bg-white px-2 py-1 text-center font-mono text-[10px] font-semibold outline-none focus:border-black"
       />
-      <ComicButton type="submit">Rejoindre / Créer</ComicButton>
-      {error && <span className="text-[10px] font-semibold text-red-600">{error}</span>}
+      <CompactButton type="submit">Rejoindre / Créer</CompactButton>
+      {error && (
+        <span className="max-w-[140px] truncate text-[10px] font-semibold text-red-600" title={error}>
+          {error}
+        </span>
+      )}
     </form>
   );
 }

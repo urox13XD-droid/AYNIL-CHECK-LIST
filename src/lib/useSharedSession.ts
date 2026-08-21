@@ -77,31 +77,13 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
         let finalCode: string;
 
         if (code) {
-          // joining a specific, already-existing session — name + code must both match
+          // a code was chosen by hand — use it as-is, whether that session already exists
+          // (join it) or not (create it under exactly that code)
           id = `${slug}-${code}`;
-          const { data: existing, error: fetchError } = await supabase
-            .from("checklist_sessions")
-            .select("data")
-            .eq("id", id)
-            .maybeSingle();
-
-          if (fetchError) {
-            setError(fetchError.message);
-            setStatus("error");
-            return;
-          }
-          if (!existing) {
-            setError("Session introuvable — vérifie le nom et le code.");
-            setStatus("error");
-            return;
-          }
-          const payload = existing.data as SharedPayload;
-          lastSyncedJson.current = JSON.stringify(payload);
-          applyRemote(payload);
           finalCode = code;
         } else {
-          // no code given — create a brand new session under a freshly generated one, so
-          // two different teams naming their session the same thing never collide
+          // no code given — pick a fresh one at random, so two different teams naming
+          // their session the same thing never collide by chance
           let attempts = 0;
           for (;;) {
             finalCode = generateCode();
@@ -115,6 +97,25 @@ export function useSharedSession(current: SharedPayload, applyRemote: (payload: 
               return;
             }
           }
+        }
+
+        const { data: existing, error: fetchError } = await supabase
+          .from("checklist_sessions")
+          .select("data")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (fetchError) {
+          setError(fetchError.message);
+          setStatus("error");
+          return;
+        }
+
+        if (existing) {
+          const payload = existing.data as SharedPayload;
+          lastSyncedJson.current = JSON.stringify(payload);
+          applyRemote(payload);
+        } else {
           const payload = current;
           const { error: insertError } = await supabase.from("checklist_sessions").insert({ id, data: payload });
           if (insertError) {
