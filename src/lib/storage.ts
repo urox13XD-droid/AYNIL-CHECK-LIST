@@ -30,17 +30,19 @@ export interface Role {
   assigneeName?: string;
 }
 
+/** quick-pick swatches offered in the role color picker, also cycled through for new roles' default color */
 export const ROLE_COLOR_PALETTE = [
-  "#f97316",
-  "#3b82f6",
-  "#22c55e",
-  "#eab308",
-  "#ec4899",
-  "#8b5cf6",
-  "#14b8a6",
   "#ef4444",
-  "#6366f1",
+  "#f97316",
+  "#eab308",
   "#84cc16",
+  "#22c55e",
+  "#14b8a6",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#ec4899",
+  "#78716c",
 ];
 
 export function defaultRoles(names: string[]): Role[] {
@@ -91,7 +93,12 @@ export function newProjectId(): string {
   return `chk_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** accepts both the current Role[] shape and the legacy plain string[] shape, so existing localStorage keeps working */
+/**
+ * Accepts both the current Role[] shape and the legacy plain string[] shape, so existing
+ * localStorage keeps working. Also heals back in any default role missing from a previously
+ * saved list (from before role deletion was disabled) — otherwise every checklist item still
+ * pointing at that role name would show as unassigned.
+ */
 export function loadRoles(defaultNames: string[]): Role[] {
   if (typeof window === "undefined") return defaultRoles(defaultNames);
   try {
@@ -99,7 +106,7 @@ export function loadRoles(defaultNames: string[]): Role[] {
     if (!raw) return defaultRoles(defaultNames);
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return defaultRoles(defaultNames);
-    return parsed.map((r, i) =>
+    const loaded: Role[] = parsed.map((r, i) =>
       typeof r === "string"
         ? { name: r, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
         : {
@@ -108,6 +115,11 @@ export function loadRoles(defaultNames: string[]): Role[] {
             assigneeName: (r as Role).assigneeName,
           }
     );
+    const known = new Set(loaded.map((r) => r.name));
+    const healed = defaultNames
+      .filter((name) => !known.has(name))
+      .map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[(loaded.length + i) % ROLE_COLOR_PALETTE.length] }));
+    return [...loaded, ...healed];
   } catch {
     return defaultRoles(defaultNames);
   }

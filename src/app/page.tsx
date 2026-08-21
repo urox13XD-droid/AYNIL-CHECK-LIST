@@ -17,14 +17,11 @@ import {
   ChecklistSection,
   Role,
   defaultRoles,
-  deleteProject,
-  listProjects,
   loadCurrent,
   loadRoles,
   newProjectId,
   saveCurrent,
   saveRoles,
-  upsertProject,
 } from "@/lib/storage";
 import { SharedPayload, useSharedSession } from "@/lib/useSharedSession";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -54,7 +51,6 @@ export default function Home() {
     projectId: "",
     ...EMPTY_SESSION,
   });
-  const [projects, setProjects] = useState<ChecklistProject[]>([]);
   const [roles, setRoles] = useState<Role[]>(() => defaultRoles(DEFAULT_ROLES));
   const [toast, setToast] = useState<string | null>(null);
 
@@ -71,8 +67,9 @@ export default function Home() {
       : { projectId: newProjectId(), ...EMPTY_SESSION };
     // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external store (localStorage) on mount
     setSession({ loaded: true, ...initial });
-    setProjects(listProjects());
-    setRoles(loadRoles(DEFAULT_ROLES));
+    const loadedRoles = loadRoles(DEFAULT_ROLES);
+    setRoles(loadedRoles);
+    saveRoles(loadedRoles);
   }, []);
 
   useEffect(() => {
@@ -238,10 +235,7 @@ export default function Home() {
   );
 
   const handleSave = useCallback(() => {
-    const project = buildProject();
-    saveCurrent(project);
-    upsertProject(project);
-    setProjects(listProjects());
+    saveCurrent(buildProject());
     setToast("Check-list sauvegardée");
   }, [buildProject]);
 
@@ -254,30 +248,6 @@ export default function Home() {
     }
     setSession({ loaded: true, projectId: newProjectId(), ...EMPTY_SESSION });
   }, [session.sections.length]);
-
-  const handleOpenProject = useCallback((id: string) => {
-    const project = listProjects().find((p) => p.id === id);
-    if (!project) return;
-    setSession({
-      loaded: true,
-      projectId: project.id,
-      title: project.name,
-      rawText: project.rawText,
-      parsedLines: null,
-      sections: project.sections,
-    });
-    saveCurrent(project);
-  }, []);
-
-  const handleDeleteProject = useCallback(
-    (id: string) => {
-      if (!window.confirm("Supprimer cette check-list sauvegardée ?")) return;
-      deleteProject(id);
-      setProjects(listProjects());
-      if (id === session.projectId) setToast("Check-list supprimée");
-    },
-    [session.projectId]
-  );
 
   const handleExportProject = useCallback(
     (mode: "blank" | "full") => {
@@ -389,9 +359,6 @@ export default function Home() {
           onImportJson={handleImportJson}
           onPrint={handlePrint}
           onLoadMasterChecklist={handleLoadMasterChecklist}
-          projects={projects}
-          onOpenProject={handleOpenProject}
-          onDeleteProject={handleDeleteProject}
           roles={roles}
           onRolesChange={handleRolesChange}
           isMobile={isMobile}

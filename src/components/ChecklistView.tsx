@@ -15,6 +15,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ComicButton } from "@/components/ComicButton";
 import { contrastTextColor } from "@/lib/color";
 import { ChecklistItemState, ChecklistSection, Role } from "@/lib/storage";
+import { useClickOutside } from "@/lib/useClickOutside";
 
 const UNASSIGNED = "__unassigned__";
 
@@ -112,6 +113,7 @@ function RoleFilter({
   onChange: (next: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(open, () => setOpen(false));
   const options = [...roles.map((r) => r.name), UNASSIGNED];
   const label = (r: string) => {
     if (r === UNASSIGNED) return "Non assigné";
@@ -125,7 +127,7 @@ function RoleFilter({
   };
 
   return (
-    <div className="relative shrink-0">
+    <div ref={ref} className="relative shrink-0">
       <ComicButton onClick={() => setOpen((v) => !v)} variant={selected.length > 0 ? "solid" : "outline"}>
         Filtrer{selected.length > 0 ? ` (${selected.length})` : ""}
       </ComicButton>
@@ -269,6 +271,7 @@ function ItemRow({
                     {roleLabel(r)}
                   </option>
                 ))}
+                {item.role && !activeRole && <option value={item.role}>{item.role}</option>}
               </select>
               <button
                 onClick={() => onToggleComment(item.id)}
@@ -305,6 +308,7 @@ function ItemRow({
                   {roleLabel(r)}
                 </option>
               ))}
+              {item.role && !activeRole && <option value={item.role}>{item.role}</option>}
             </select>
             <button
               onClick={() => onToggleComment(item.id)}

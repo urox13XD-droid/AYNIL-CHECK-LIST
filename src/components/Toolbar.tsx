@@ -3,9 +3,44 @@
 import { useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ComicButton } from "@/components/ComicButton";
-import { ChecklistProject, ROLE_COLOR_PALETTE, Role } from "@/lib/storage";
+import { ROLE_COLOR_PALETTE, Role } from "@/lib/storage";
+import { useClickOutside } from "@/lib/useClickOutside";
 
 export type ExportMode = "blank" | "full";
+
+function RoleColorPicker({ role, onChange }: { role: Role; onChange: (color: string) => void }) {
+  const customInputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {ROLE_COLOR_PALETTE.map((c) => (
+        <button
+          key={c}
+          type="button"
+          title={c}
+          onClick={() => onChange(c)}
+          style={{ backgroundColor: c, boxShadow: role.color === c ? "0 0 0 2px #000" : undefined }}
+          className="h-4 w-4 shrink-0 rounded-sm border border-black/30"
+        />
+      ))}
+      <button
+        type="button"
+        title="Autre couleur…"
+        onClick={() => customInputRef.current?.click()}
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-black/30 bg-[conic-gradient(from_0deg,red,yellow,lime,cyan,blue,magenta,red)] text-[8px] font-black text-white"
+        style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}
+      >
+        +
+      </button>
+      <input
+        ref={customInputRef}
+        type="color"
+        value={role.color}
+        onChange={(e) => onChange(e.target.value)}
+        className="hidden"
+      />
+    </div>
+  );
+}
 
 export function Toolbar({
   title,
@@ -16,9 +51,6 @@ export function Toolbar({
   onImportJson,
   onPrint,
   onLoadMasterChecklist,
-  projects,
-  onOpenProject,
-  onDeleteProject,
   roles,
   onRolesChange,
   isMobile = false,
@@ -31,19 +63,18 @@ export function Toolbar({
   onImportJson: (file: File) => void;
   onPrint: () => void;
   onLoadMasterChecklist: () => void;
-  projects: ChecklistProject[];
-  onOpenProject: (id: string) => void;
-  onDeleteProject: (id: string) => void;
   roles: Role[];
   onRolesChange: (roles: Role[]) => void;
   /** stacks title and actions on two rows, actions in a horizontally scrollable strip, so a phone-width screen doesn't have to fit everything at once */
   isMobile?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newRole, setNewRole] = useState("");
+
+  const rolesRef = useClickOutside<HTMLDivElement>(rolesOpen, () => setRolesOpen(false));
+  const exportRef = useClickOutside<HTMLDivElement>(exportOpen, () => setExportOpen(false));
 
   const importInput = (
     <input
@@ -60,37 +91,23 @@ export function Toolbar({
   );
 
   const rolesMenu = (align: "left" | "right") => (
-    <div className="relative shrink-0">
+    <div ref={rolesRef} className="relative shrink-0">
       <ComicButton onClick={() => setRolesOpen((v) => !v)} title="Gérer les rôles">
         Rôles
       </ComicButton>
       {rolesOpen && (
-        <div className={`absolute ${align}-0 z-20 mt-2 w-64 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg`}>
+        <div className={`absolute ${align}-0 z-20 mt-2 w-72 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg`}>
           <p className="font-display mb-2 text-[11px] font-bold uppercase tracking-wider">
             Rôles disponibles
           </p>
           <div className="mb-2 flex flex-col gap-2">
             {roles.map((r) => (
-              <div key={r.name} className="flex flex-col gap-1 border-b-[1.5px] border-black/10 pb-2 last:border-b-0 last:pb-0">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={r.color}
-                    title="Couleur du poste"
-                    onChange={(e) =>
-                      onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, color: e.target.value } : x)))
-                    }
-                    className="h-6 w-6 shrink-0 cursor-pointer rounded border-[1.5px] border-black p-0"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs font-bold">{r.name}</span>
-                  <button
-                    className="shrink-0 font-bold opacity-50 hover:opacity-100"
-                    title="Supprimer"
-                    onClick={() => onRolesChange(roles.filter((x) => x.name !== r.name))}
-                  >
-                    ✕
-                  </button>
-                </div>
+              <div key={r.name} className="flex flex-col gap-1.5 border-b-[1.5px] border-black/10 pb-2 last:border-b-0 last:pb-0">
+                <span className="truncate text-xs font-bold">{r.name}</span>
+                <RoleColorPicker
+                  role={r}
+                  onChange={(color) => onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, color } : x)))}
+                />
                 <input
                   value={r.assigneeName ?? ""}
                   onChange={(e) =>
@@ -128,50 +145,8 @@ export function Toolbar({
     </div>
   );
 
-  const openMenu = (align: "left" | "right") => (
-    <div className="relative shrink-0">
-      <ComicButton onClick={() => setMenuOpen((v) => !v)} title="Check-lists enregistrées">
-        Ouvrir
-      </ComicButton>
-      {menuOpen && (
-        <div className={`absolute ${align}-0 z-20 mt-2 w-64 rounded-lg border-[2.5px] border-black bg-white shadow-comic-lg`}>
-          <div className="max-h-72 overflow-y-auto">
-            {projects.length === 0 && (
-              <p className="p-3 text-xs font-semibold text-black/50">
-                Aucune check-list enregistrée.
-              </p>
-            )}
-            {projects.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-2 border-b border-black/10 px-3 py-2 text-xs last:border-b-0 hover:bg-black hover:text-white"
-              >
-                <button
-                  className="min-w-0 flex-1 truncate text-left font-bold"
-                  onClick={() => {
-                    onOpenProject(p.id);
-                    setMenuOpen(false);
-                  }}
-                >
-                  {p.name}
-                </button>
-                <button
-                  className="shrink-0 font-bold opacity-60 hover:opacity-100"
-                  title="Supprimer"
-                  onClick={() => onDeleteProject(p.id)}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   const exportMenu = (align: "left" | "right") => (
-    <div className="relative shrink-0">
+    <div ref={exportRef} className="relative shrink-0">
       <ComicButton onClick={() => setExportOpen((v) => !v)} title="Exporter le projet">
         Export Project
       </ComicButton>
@@ -204,14 +179,23 @@ export function Toolbar({
     </div>
   );
 
-  const actionButtons = (align: "left" | "right") => (
+  const openButton = (
     <>
-      <ComicButton onClick={onNew}>Nouveau</ComicButton>
-      <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
       {importInput}
-      <ComicButton onClick={() => fileRef.current?.click()}>Importer</ComicButton>
-      {exportMenu(align)}
-      <ComicButton onClick={onPrint}>Imprimer / PDF</ComicButton>
+      <ComicButton onClick={() => fileRef.current?.click()} title="Ouvrir un fichier .json">
+        Ouvrir
+      </ComicButton>
+    </>
+  );
+
+  const printButtons = (
+    <>
+      <ComicButton onClick={onPrint} title="Imprimer la check-list">
+        Imprimer
+      </ComicButton>
+      <ComicButton onClick={onPrint} title="Enregistrer en PDF">
+        PDF
+      </ComicButton>
       <ComicButton onClick={onSave} variant="solid">
         Sauvegarder
       </ComicButton>
@@ -232,8 +216,11 @@ export function Toolbar({
         </div>
         <div className="flex items-center gap-2 overflow-x-auto">
           {rolesMenu("left")}
-          {openMenu("left")}
-          {actionButtons("left")}
+          {openButton}
+          <ComicButton onClick={onNew}>Nouveau</ComicButton>
+          <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
+          {exportMenu("left")}
+          {printButtons}
         </div>
       </header>
     );
@@ -253,8 +240,11 @@ export function Toolbar({
       />
 
       {rolesMenu("right")}
-      {openMenu("right")}
-      {actionButtons("right")}
+      {openButton}
+      <ComicButton onClick={onNew}>Nouveau</ComicButton>
+      <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
+      {exportMenu("right")}
+      {printButtons}
     </header>
   );
 }

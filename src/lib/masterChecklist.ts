@@ -361,9 +361,7 @@ const SECTIONS: RawSection[] = [
 function makeItem(rawLabel: string, roleCodes: string): ChecklistItemState {
   const codes = roleCodes ? roleCodes.split(",") : [];
   const role = codes.length > 0 ? MASTER_ROLE_NAMES[codes[0]] : "";
-  const extra = codes.slice(1).map((c) => MASTER_ROLE_NAMES[c]);
-  const label = extra.length > 0 ? `${rawLabel} (+ ${extra.join(", ")})` : rawLabel;
-  return { id: `item_${Math.random().toString(36).slice(2, 9)}`, label, checked: false, role };
+  return { id: `item_${Math.random().toString(36).slice(2, 9)}`, label: rawLabel, checked: false, role };
 }
 
 /** The full "MASTER CHECKLIST ESSAIS CAMÉRA" template, independent of any specific equipment list. */
