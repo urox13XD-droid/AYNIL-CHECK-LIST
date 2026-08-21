@@ -23,6 +23,30 @@ export interface ChecklistProject {
   updatedAt: number;
 }
 
+/** a checklist role/poste — `name` is its stable identity (matched against ChecklistItemState.role), `assigneeName` is a display override (e.g. a person's name) */
+export interface Role {
+  name: string;
+  color: string;
+  assigneeName?: string;
+}
+
+export const ROLE_COLOR_PALETTE = [
+  "#f97316",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#ec4899",
+  "#8b5cf6",
+  "#14b8a6",
+  "#ef4444",
+  "#6366f1",
+  "#84cc16",
+];
+
+export function defaultRoles(names: string[]): Role[] {
+  return names.map((name, i) => ({ name, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }));
+}
+
 const CURRENT_KEY = "aynil-checklist:current";
 const PROJECTS_KEY = "aynil-checklist:projects";
 const ROLES_KEY = "aynil-checklist:roles";
@@ -67,17 +91,29 @@ export function newProjectId(): string {
   return `chk_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function loadRoles(defaults: string[]): string[] {
-  if (typeof window === "undefined") return defaults;
+/** accepts both the current Role[] shape and the legacy plain string[] shape, so existing localStorage keeps working */
+export function loadRoles(defaultNames: string[]): Role[] {
+  if (typeof window === "undefined") return defaultRoles(defaultNames);
   try {
     const raw = window.localStorage.getItem(ROLES_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : defaults;
+    if (!raw) return defaultRoles(defaultNames);
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return defaultRoles(defaultNames);
+    return parsed.map((r, i) =>
+      typeof r === "string"
+        ? { name: r, color: ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length] }
+        : {
+            name: (r as Role).name,
+            color: (r as Role).color || ROLE_COLOR_PALETTE[i % ROLE_COLOR_PALETTE.length],
+            assigneeName: (r as Role).assigneeName,
+          }
+    );
   } catch {
-    return defaults;
+    return defaultRoles(defaultNames);
   }
 }
 
-export function saveRoles(roles: string[]) {
+export function saveRoles(roles: Role[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(ROLES_KEY, JSON.stringify(roles));
 }

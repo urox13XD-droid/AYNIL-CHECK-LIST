@@ -15,6 +15,8 @@ import { ParsedLine, parseEquipmentList } from "@/lib/parse";
 import {
   ChecklistProject,
   ChecklistSection,
+  Role,
+  defaultRoles,
   deleteProject,
   listProjects,
   loadCurrent,
@@ -53,7 +55,7 @@ export default function Home() {
     ...EMPTY_SESSION,
   });
   const [projects, setProjects] = useState<ChecklistProject[]>([]);
-  const [roles, setRoles] = useState<string[]>(DEFAULT_ROLES);
+  const [roles, setRoles] = useState<Role[]>(() => defaultRoles(DEFAULT_ROLES));
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -277,16 +279,31 @@ export default function Home() {
     [session.projectId]
   );
 
-  const handleExportJson = useCallback(() => {
-    const project = buildProject();
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${session.title.trim().replace(/\s+/g, "_") || "checklist"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [buildProject, session.title]);
+  const handleExportProject = useCallback(
+    (mode: "blank" | "full") => {
+      const project = buildProject();
+      const exportProject: ChecklistProject =
+        mode === "full"
+          ? project
+          : {
+              ...project,
+              sections: project.sections.map((sec) => ({
+                ...sec,
+                collapsed: false,
+                items: sec.items.map((it) => ({ id: it.id, label: it.label, checked: false, role: it.role })),
+              })),
+            };
+      const blob = new Blob([JSON.stringify(exportProject, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const suffix = mode === "blank" ? "blank" : "full";
+      a.download = `${session.title.trim().replace(/\s+/g, "_") || "checklist"}_${suffix}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    [buildProject, session.title]
+  );
 
   const handleImportJson = useCallback((file: File) => {
     const reader = new FileReader();
@@ -314,7 +331,7 @@ export default function Home() {
     window.print();
   }, []);
 
-  const handleRolesChange = useCallback((next: string[]) => {
+  const handleRolesChange = useCallback((next: Role[]) => {
     setRoles(next);
     saveRoles(next);
   }, []);
@@ -368,7 +385,7 @@ export default function Home() {
           onTitleChange={setTitle}
           onNew={handleNew}
           onSave={handleSave}
-          onExportJson={handleExportJson}
+          onExportProject={handleExportProject}
           onImportJson={handleImportJson}
           onPrint={handlePrint}
           onLoadMasterChecklist={handleLoadMasterChecklist}

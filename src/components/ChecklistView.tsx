@@ -13,9 +13,14 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ComicButton } from "@/components/ComicButton";
-import { ChecklistItemState, ChecklistSection } from "@/lib/storage";
+import { contrastTextColor } from "@/lib/color";
+import { ChecklistItemState, ChecklistSection, Role } from "@/lib/storage";
 
 const UNASSIGNED = "__unassigned__";
+
+function roleLabel(role: Role): string {
+  return role.assigneeName?.trim() || role.name;
+}
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -102,13 +107,18 @@ function RoleFilter({
   selected,
   onChange,
 }: {
-  roles: string[];
+  roles: Role[];
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const options = [...roles, UNASSIGNED];
-  const label = (r: string) => (r === UNASSIGNED ? "Non assigné" : r);
+  const options = [...roles.map((r) => r.name), UNASSIGNED];
+  const label = (r: string) => {
+    if (r === UNASSIGNED) return "Non assigné";
+    const role = roles.find((x) => x.name === r);
+    return role ? roleLabel(role) : r;
+  };
+  const swatch = (r: string) => roles.find((x) => x.name === r)?.color ?? "#e5e5e5";
 
   const toggle = (r: string) => {
     onChange(selected.includes(r) ? selected.filter((x) => x !== r) : [...selected, r]);
@@ -132,6 +142,10 @@ function RoleFilter({
                   checked={selected.includes(r)}
                   onChange={() => toggle(r)}
                   className="h-3.5 w-3.5 accent-black"
+                />
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/30"
+                  style={{ backgroundColor: swatch(r) }}
                 />
                 {label(r)}
               </label>
@@ -167,7 +181,7 @@ function ItemRow({
 }: {
   sectionId: string;
   item: ChecklistItemState;
-  roles: string[];
+  roles: Role[];
   reorderDisabled: boolean;
   commentOpen: boolean;
   isMobile: boolean;
@@ -183,6 +197,10 @@ function ItemRow({
     disabled: reorderDisabled,
   });
   const hasComment = !!item.comment?.trim();
+  const activeRole = roles.find((r) => r.name === item.role);
+  const roleSelectStyle = activeRole
+    ? { backgroundColor: activeRole.color, borderColor: activeRole.color, color: contrastTextColor(activeRole.color) }
+    : undefined;
   // desktop: the whole row is the drag target; mobile keeps a dedicated handle so touch-scrolling still works
   const rowDragProps = isMobile ? {} : { ...attributes, ...listeners };
   const handleDragProps = isMobile ? { ...attributes, ...listeners } : {};
@@ -242,12 +260,13 @@ function ItemRow({
               <select
                 value={item.role}
                 onChange={(e) => onRoleChange(sectionId, item.id, e.target.value)}
+                style={roleSelectStyle}
                 className="shrink-0 rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-bold uppercase outline-none focus:border-black"
               >
                 <option value="">Non assigné</option>
                 {roles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
+                  <option key={r.name} value={r.name} style={{ backgroundColor: r.color, color: contrastTextColor(r.color) }}>
+                    {roleLabel(r)}
                   </option>
                 ))}
               </select>
@@ -277,12 +296,13 @@ function ItemRow({
             <select
               value={item.role}
               onChange={(e) => onRoleChange(sectionId, item.id, e.target.value)}
+              style={roleSelectStyle}
               className="min-w-0 flex-1 rounded-md border-[1.5px] border-black/40 bg-white px-1.5 py-1 text-[10px] font-bold uppercase outline-none focus:border-black"
             >
               <option value="">Non assigné</option>
               {roles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
+                <option key={r.name} value={r.name} style={{ backgroundColor: r.color, color: contrastTextColor(r.color) }}>
+                  {roleLabel(r)}
                 </option>
               ))}
             </select>
@@ -345,7 +365,7 @@ function SectionCard({
   section: ChecklistSection;
   number: number;
   items: ChecklistItemState[];
-  roles: string[];
+  roles: Role[];
   complete: boolean;
   reorderDisabled: boolean;
   forceCollapsed: boolean;
@@ -485,7 +505,7 @@ export function ChecklistView({
   isMobile = false,
 }: {
   sections: ChecklistSection[];
-  roles: string[];
+  roles: Role[];
   onToggle: (sectionId: string, itemId: string) => void;
   onRoleChange: (sectionId: string, itemId: string, role: string) => void;
   onAddItem: (sectionId: string, label: string) => void;

@@ -3,14 +3,16 @@
 import { useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ComicButton } from "@/components/ComicButton";
-import { ChecklistProject } from "@/lib/storage";
+import { ChecklistProject, ROLE_COLOR_PALETTE, Role } from "@/lib/storage";
+
+export type ExportMode = "blank" | "full";
 
 export function Toolbar({
   title,
   onTitleChange,
   onNew,
   onSave,
-  onExportJson,
+  onExportProject,
   onImportJson,
   onPrint,
   onLoadMasterChecklist,
@@ -25,21 +27,22 @@ export function Toolbar({
   onTitleChange: (v: string) => void;
   onNew: () => void;
   onSave: () => void;
-  onExportJson: () => void;
+  onExportProject: (mode: ExportMode) => void;
   onImportJson: (file: File) => void;
   onPrint: () => void;
   onLoadMasterChecklist: () => void;
   projects: ChecklistProject[];
   onOpenProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
-  roles: string[];
-  onRolesChange: (roles: string[]) => void;
+  roles: Role[];
+  onRolesChange: (roles: Role[]) => void;
   /** stacks title and actions on two rows, actions in a horizontally scrollable strip, so a phone-width screen doesn't have to fit everything at once */
   isMobile?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [newRole, setNewRole] = useState("");
 
   const importInput = (
@@ -66,17 +69,38 @@ export function Toolbar({
           <p className="font-display mb-2 text-[11px] font-bold uppercase tracking-wider">
             Rôles disponibles
           </p>
-          <div className="mb-2 flex flex-col gap-1">
+          <div className="mb-2 flex flex-col gap-2">
             {roles.map((r) => (
-              <div key={r} className="flex items-center justify-between gap-2 text-xs font-semibold">
-                <span className="truncate">{r}</span>
-                <button
-                  className="shrink-0 font-bold opacity-50 hover:opacity-100"
-                  title="Supprimer"
-                  onClick={() => onRolesChange(roles.filter((x) => x !== r))}
-                >
-                  ✕
-                </button>
+              <div key={r.name} className="flex flex-col gap-1 border-b-[1.5px] border-black/10 pb-2 last:border-b-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={r.color}
+                    title="Couleur du poste"
+                    onChange={(e) =>
+                      onRolesChange(roles.map((x) => (x.name === r.name ? { ...x, color: e.target.value } : x)))
+                    }
+                    className="h-6 w-6 shrink-0 cursor-pointer rounded border-[1.5px] border-black p-0"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-xs font-bold">{r.name}</span>
+                  <button
+                    className="shrink-0 font-bold opacity-50 hover:opacity-100"
+                    title="Supprimer"
+                    onClick={() => onRolesChange(roles.filter((x) => x.name !== r.name))}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <input
+                  value={r.assigneeName ?? ""}
+                  onChange={(e) =>
+                    onRolesChange(
+                      roles.map((x) => (x.name === r.name ? { ...x, assigneeName: e.target.value } : x))
+                    )
+                  }
+                  placeholder="Nom de la personne (ex : Magalie)"
+                  className="w-full rounded-md border-[1.5px] border-black/30 px-2 py-1 text-[11px] font-semibold outline-none focus:border-black"
+                />
               </div>
             ))}
           </div>
@@ -85,7 +109,9 @@ export function Toolbar({
             onSubmit={(e) => {
               e.preventDefault();
               const v = newRole.trim();
-              if (v && !roles.includes(v)) onRolesChange([...roles, v]);
+              if (v && !roles.some((x) => x.name === v)) {
+                onRolesChange([...roles, { name: v, color: ROLE_COLOR_PALETTE[roles.length % ROLE_COLOR_PALETTE.length] }]);
+              }
               setNewRole("");
             }}
           >
@@ -144,13 +170,47 @@ export function Toolbar({
     </div>
   );
 
-  const actionButtons = (
+  const exportMenu = (align: "left" | "right") => (
+    <div className="relative shrink-0">
+      <ComicButton onClick={() => setExportOpen((v) => !v)} title="Exporter le projet">
+        Export Project
+      </ComicButton>
+      {exportOpen && (
+        <div className={`absolute ${align}-0 z-20 mt-2 w-64 rounded-lg border-[2.5px] border-black bg-white p-1.5 shadow-comic-lg`}>
+          <button
+            className="w-full rounded-md px-2.5 py-2 text-left hover:bg-black hover:text-white"
+            onClick={() => {
+              onExportProject("blank");
+              setExportOpen(false);
+            }}
+          >
+            <span className="font-display block text-xs uppercase tracking-wide">Blank Export</span>
+            <span className="block text-[10px] font-semibold opacity-60">
+              Structure seule — sans cases cochées, couleurs ni commentaires
+            </span>
+          </button>
+          <button
+            className="w-full rounded-md px-2.5 py-2 text-left hover:bg-black hover:text-white"
+            onClick={() => {
+              onExportProject("full");
+              setExportOpen(false);
+            }}
+          >
+            <span className="font-display block text-xs uppercase tracking-wide">Full Export</span>
+            <span className="block text-[10px] font-semibold opacity-60">Tout, dans l&apos;état actuel</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const actionButtons = (align: "left" | "right") => (
     <>
       <ComicButton onClick={onNew}>Nouveau</ComicButton>
       <ComicButton onClick={onLoadMasterChecklist}>Master Checklist</ComicButton>
       {importInput}
       <ComicButton onClick={() => fileRef.current?.click()}>Importer</ComicButton>
-      <ComicButton onClick={onExportJson}>Export JSON</ComicButton>
+      {exportMenu(align)}
       <ComicButton onClick={onPrint}>Imprimer / PDF</ComicButton>
       <ComicButton onClick={onSave} variant="solid">
         Sauvegarder
@@ -173,7 +233,7 @@ export function Toolbar({
         <div className="flex items-center gap-2 overflow-x-auto">
           {rolesMenu("left")}
           {openMenu("left")}
-          {actionButtons}
+          {actionButtons("left")}
         </div>
       </header>
     );
@@ -194,7 +254,7 @@ export function Toolbar({
 
       {rolesMenu("right")}
       {openMenu("right")}
-      {actionButtons}
+      {actionButtons("right")}
     </header>
   );
 }
