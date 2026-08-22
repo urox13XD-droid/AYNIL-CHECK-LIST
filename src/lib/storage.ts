@@ -43,12 +43,13 @@ export const ROLE_COLOR_PALETTE = [
 
 /** fixed identity color per default role/poste, as specified — distinct on purpose so they're never confused for one another */
 export const DEFAULT_ROLE_COLORS: Record<string, string> = {
-  "1er assistant caméra": "#8bc34a",
-  "2e assistant caméra": "#c8e6c9",
-  "3e assistant caméra / vidéo": "#bbdefb",
-  "Assistant vidéo / HF": "#c5cae9",
-  "Chef opérateur": "#7c4dff",
-  DIT: "#d81b60",
+  "1er assistant caméra": "#a855f7", // violet
+  "2e assistant caméra": "#eab308", // jaune
+  "3e assistant caméra / vidéo": "#3b82f6", // bleu
+  "Assistant vidéo / HF": "#22c55e", // vert
+  "Chef opérateur": "#6b21a8", // violet foncé
+  DIT: "#ef4444", // rouge
+  Régie: "#ec4899", // rose
 };
 
 /**
@@ -72,7 +73,7 @@ export function defaultRoles(names: string[]): Role[] {
 const CURRENT_KEY = "aynil-checklist:current";
 const PROJECTS_KEY = "aynil-checklist:projects";
 const ROLES_KEY = "aynil-checklist:roles";
-const ROLE_COLOR_RESET_KEY = "aynil-checklist:role-color-reset-v1";
+const ROLE_COLOR_RESET_KEY = "aynil-checklist:role-color-reset-v2";
 
 /** true (once, ever) the first time this runs on a given browser — used to force every default role back to its exact specified color one time, since earlier picker experiments could have left one on some other color that later heuristics kept mistaking for a deliberate pick */
 function consumeForcedColorReset(): boolean {
