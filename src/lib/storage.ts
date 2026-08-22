@@ -51,18 +51,18 @@ export const DEFAULT_ROLE_COLORS: Record<string, string> = {
   DIT: "#d81b60",
 };
 
-/** every color a default role has ever been auto-assigned across past palette iterations — used below to tell "still whatever default it was given" apart from "the user genuinely picked this color" */
-const AUTO_ASSIGNED_LEGACY_COLORS = new Set([
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#a855f7",
-  "#f4a6a0", "#f5c396", "#f0e08a", "#a8d8a2", "#8fd4c1", "#a8c8f0", "#c9a8e0",
-  "#ffd5d2", "#fedec8", "#f8e6a0", "#baf3db", "#c6edfb", "#cce0ff", "#dfd8fd",
-]);
-
-/** resolves the color a role should have: its fixed identity color if it has one and hasn't been deliberately customized away from it, otherwise whatever is already stored, otherwise a palette color cycled by position */
+/**
+ * Resolves the color a role should have: whatever is already stored, no questions asked — a
+ * stored color always wins, whether it came from the picker's presets, a custom pick, or a
+ * previous default, since there is no reliable way to tell those apart after the fact (an
+ * earlier attempt at guessing "was this a leftover default?" ended up reverting deliberate
+ * picks that happened to match a preset swatch). Only a role with no stored color yet — brand
+ * new, or forced back to blank by consumeForcedColorReset() below — falls back to its fixed
+ * identity color or a palette color cycled by position.
+ */
 function colorForRole(name: string, storedColor: string | undefined, indexFallback: number): string {
-  const fixed = DEFAULT_ROLE_COLORS[name];
-  if (fixed && (!storedColor || AUTO_ASSIGNED_LEGACY_COLORS.has(storedColor))) return fixed;
-  return storedColor || ROLE_COLOR_PALETTE[indexFallback % ROLE_COLOR_PALETTE.length];
+  if (storedColor) return storedColor;
+  return DEFAULT_ROLE_COLORS[name] ?? ROLE_COLOR_PALETTE[indexFallback % ROLE_COLOR_PALETTE.length];
 }
 
 export function defaultRoles(names: string[]): Role[] {
@@ -72,6 +72,15 @@ export function defaultRoles(names: string[]): Role[] {
 const CURRENT_KEY = "aynil-checklist:current";
 const PROJECTS_KEY = "aynil-checklist:projects";
 const ROLES_KEY = "aynil-checklist:roles";
+const ROLE_COLOR_RESET_KEY = "aynil-checklist:role-color-reset-v1";
+
+/** true (once, ever) the first time this runs on a given browser — used to force every default role back to its exact specified color one time, since earlier picker experiments could have left one on some other color that later heuristics kept mistaking for a deliberate pick */
+function consumeForcedColorReset(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.localStorage.getItem(ROLE_COLOR_RESET_KEY)) return false;
+  window.localStorage.setItem(ROLE_COLOR_RESET_KEY, "1");
+  return true;
+}
 
 export function loadCurrent(): ChecklistProject | null {
   if (typeof window === "undefined") return null;
@@ -127,12 +136,13 @@ export function loadRoles(defaultNames: string[]): Role[] {
     if (!raw) return defaultRoles(defaultNames);
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return defaultRoles(defaultNames);
+    const forceReset = consumeForcedColorReset();
     const loaded: Role[] = parsed.map((r, i) =>
       typeof r === "string"
         ? { name: r, color: colorForRole(r, undefined, i) }
         : {
             name: (r as Role).name,
-            color: colorForRole((r as Role).name, (r as Role).color, i),
+            color: colorForRole((r as Role).name, forceReset ? undefined : (r as Role).color, i),
             assigneeName: (r as Role).assigneeName,
           }
     );
