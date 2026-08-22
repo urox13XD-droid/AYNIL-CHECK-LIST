@@ -154,7 +154,7 @@ export default function Home() {
   );
 
   const handleAddItem = useCallback(
-    (sectionId: string, label: string) => {
+    (sectionId: string, label: string, role: string) => {
       updateSections((sections) =>
         sections.map((sec) =>
           sec.id !== sectionId
@@ -163,7 +163,7 @@ export default function Home() {
                 ...sec,
                 items: [
                   ...sec.items,
-                  { id: `item_${Math.random().toString(36).slice(2, 9)}`, label, checked: false, role: "" },
+                  { id: `item_${Math.random().toString(36).slice(2, 9)}`, label, checked: false, role },
                 ],
               }
         )

@@ -353,6 +353,7 @@ function SectionCard({
   roles,
   complete,
   reorderDisabled,
+  autoAssignRole,
   forceCollapsed,
   justDraggedSectionRef,
   openComments,
@@ -372,13 +373,15 @@ function SectionCard({
   roles: Role[];
   complete: boolean;
   reorderDisabled: boolean;
+  /** role newly added items should get — the highest-priority role among the active filter, or "" when no filter is active */
+  autoAssignRole: string;
   forceCollapsed: boolean;
   justDraggedSectionRef: React.RefObject<string | null>;
   openComments: Set<string>;
   isMobile: boolean;
   onToggle: (sectionId: string, itemId: string) => void;
   onRoleChange: (sectionId: string, itemId: string, role: string) => void;
-  onAddItem: (sectionId: string, label: string) => void;
+  onAddItem: (sectionId: string, label: string, role: string) => void;
   onRemoveItem: (sectionId: string, itemId: string) => void;
   onToggleCollapse: (sectionId: string) => void;
   onCommentChange: (sectionId: string, itemId: string, comment: string) => void;
@@ -487,14 +490,7 @@ function SectionCard({
             </DndContext>
           </div>
           <div className="border-t-[1.5px] border-black/10 px-4 pb-3">
-            {reorderDisabled ? (
-              <p className="mt-2 text-[10px] font-semibold text-black/40">
-                Désactivez le filtre pour ajouter un point de contrôle — sinon il est ajouté mais reste
-                caché tant qu&apos;il ne correspond pas au filtre.
-              </p>
-            ) : (
-              <AddItemForm onAdd={(label) => onAddItem(section.id, label)} />
-            )}
+            <AddItemForm onAdd={(label) => onAddItem(section.id, label, autoAssignRole)} />
           </div>
         </>
       )}
@@ -519,7 +515,7 @@ export function ChecklistView({
   roles: Role[];
   onToggle: (sectionId: string, itemId: string) => void;
   onRoleChange: (sectionId: string, itemId: string, role: string) => void;
-  onAddItem: (sectionId: string, label: string) => void;
+  onAddItem: (sectionId: string, label: string, role: string) => void;
   onRemoveItem: (sectionId: string, itemId: string) => void;
   onToggleCollapse: (sectionId: string) => void;
   onCommentChange: (sectionId: string, itemId: string, comment: string) => void;
@@ -556,6 +552,10 @@ export function ChecklistView({
   const allVisibleItems = visibleSections.flatMap(({ items }) => items);
   const totalDone = allVisibleItems.filter((i) => i.checked).length;
   const reorderDisabled = filterRoles.length > 0;
+  // a newly added item is assigned the highest-priority filtered role (roles are already in
+  // canonical order, e.g. 1er assistant caméra first) so it's visible right away, or left
+  // unassigned when no filter narrows things down
+  const autoAssignRole = roles.find((r) => filterRoles.includes(r.name))?.name ?? "";
 
   // collapsing every section while one is being dragged avoids the layout jumping around when a
   // collapsed section passes over an expanded one (their heights can differ by a lot)
@@ -607,6 +607,7 @@ export function ChecklistView({
                 roles={roles}
                 complete={items.length > 0 && items.filter((i) => i.checked).length === items.length}
                 reorderDisabled={reorderDisabled}
+                autoAssignRole={autoAssignRole}
                 forceCollapsed={sectionDragActive}
                 justDraggedSectionRef={justDraggedSectionRef}
                 openComments={openComments}
