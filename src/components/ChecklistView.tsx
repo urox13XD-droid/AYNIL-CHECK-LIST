@@ -487,7 +487,14 @@ function SectionCard({
             </DndContext>
           </div>
           <div className="border-t-[1.5px] border-black/10 px-4 pb-3">
-            <AddItemForm onAdd={(label) => onAddItem(section.id, label)} />
+            {reorderDisabled ? (
+              <p className="mt-2 text-[10px] font-semibold text-black/40">
+                Désactivez le filtre pour ajouter un point de contrôle — sinon il est ajouté mais reste
+                caché tant qu&apos;il ne correspond pas au filtre.
+              </p>
+            ) : (
+              <AddItemForm onAdd={(label) => onAddItem(section.id, label)} />
+            )}
           </div>
         </>
       )}

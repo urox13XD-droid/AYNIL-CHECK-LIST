@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import NextImage from "next/image";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Toolbar } from "@/components/Toolbar";
 import { ImportPanel } from "@/components/ImportPanel";
@@ -507,10 +506,6 @@ export default function Home() {
               </svg>
             )}
           </button>
-        </div>
-        <div className="no-print pointer-events-none fixed bottom-2 right-3 z-10 flex items-center gap-1.5 opacity-60">
-          <span className="text-[10px] font-semibold text-black">Powered by</span>
-          <NextImage src="/logo-transpa.png" alt="Transpa" width={917} height={162} className="h-3 w-auto" />
         </div>
       </div>
       {toast && (
